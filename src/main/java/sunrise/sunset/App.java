@@ -5,9 +5,7 @@ public class App {
 	private static double[] A = new double[2];
 	private static double[] D = new double[2];
 	
-	private static final double P1 = 3.14159265;
-	private static final double P2 = 2*P1;
-	private static final double DR = P1/180.0;
+	private static final double DR = Math.PI/180.0;
 	private static final double K1 = 15.0 * DR * 1.0027379;
 	
 	private static double B5 = 39.185768; //Latitude of Manhattan, KS 
@@ -50,7 +48,7 @@ public class App {
 		
 		
 		if (A[1] < A[0]) {
-			A[1] = A[1]+P2;
+			A[1] = A[1]+2*Math.PI;
 		}
 		double Z1 = DR * 90.833; // Zenith dist.
 		
@@ -61,11 +59,9 @@ public class App {
 		M8 = 0;
 		W8 = 0;
 		
-		//190 A0=A(1): D0=D(1)
 		double A0 = A[0];
 		double D0 = D[0];
 		
-		//200 DA=A(2)-A(1): DD=D(2)-D(1)
 		double DA = A[1] - A[0];
 		double DD = D[1] - D[0];
 		
@@ -108,7 +104,6 @@ public class App {
 				System.out.println("No sunset this date");
 			}
 		}
-
 	}
 	
 	
@@ -203,62 +198,39 @@ public class App {
 		//   Fundamental arguments
 		//     (Van Flandern &
 		//     Pulkkinen, 1979)
-
-
-		//940 L=.779072+.00273790931*T
 		double L = .779072 + .00273790931*T;
-		//950 G=.993126+.0027377785*T
 		double G = .993126 + .0027377785*T;
 
-		//960 L=L-INT(L): G=G-INT(G)
 		L = L - ((int) L);
 		G = G - ((int) G);
 
-		//970 L=L*P2: G=G*P2
-		L = L*P2;
-		G = G*P2;
+		L = L*2*Math.PI;
+		G = G*2*Math.PI;
 
-		//980 V=.39785*SIN(L)
 		double V = .39785 * Math.sin(L);
-		//990 V=V-.01000*SIN(L-G)
 		V = V - .01000 * Math.sin(L-G);
-		//1000 V=V+.00333*SIN(L+G)
 		V = V + .00333 * Math.sin(L+G);
-		//1010 V=V-.00021*TT*SIN(L)
 		V = V - .00021 * TT * Math.sin(L);
 		
-		//1020 U=1-.03349*COS(G)
 		double U = 1 - .03349 * Math.cos(G);
-		//1030 U=U-.00014*COS(2*L)
 		U = U - .00014 * Math.cos(2*L);
-		//1040 U=U+.00008*COS(L)
 		U = U + .00008 * Math.cos(L);
 
-		//1050 W=-.00010-.04129*SIN(2*L)
 		double W = -.00010 - .04129 * Math.sin(2*L);
-		//1060 W=W+.03211*SIN(G)
 		W = W + .03211 * Math.sin(G);
-		//1070 W=W+.00104*SIN(2*L-G)
 		W = W + .00104 * Math.sin(2*L-G);
-		//1080 W=W-.00035*SIN(2*L+G)
 		W = W - .00035 * Math.sin(2*L+G);
-		//1090 W=W-.00008*TT*SIN(G)
 		W = W - .00008 * TT * Math.sin(G);
 		
 		
 		//    Compute Sun's RA and Dec		
-		//1120 S=W/SQR(U-V*V)
 		double S = W / Math.sqrt(U - V*V);
-		//1130 A5=L+ATN(S/SQR(1-S*S))
 		A5 = L + Math.atan(S / Math.sqrt(1 - S*S));
 		
-		//1140 S=V/SQR(U):D5=ATN(S/SQR(1-S*S))
 		S = V / Math.sqrt(U);
 		D5 = Math.atan(S / Math.sqrt(1 - S*S));
 		
 		//System.err.println("calculateSunPosition: ("+A5+","+D5+")");
-		//1150 R5=1.00021*SQR(U)
-		//double R5 = 1.00021 * Math.sqrt(U);
 	}
 	
 	/**
@@ -266,20 +238,15 @@ public class App {
 	 */
 	private static double T0;
 	private static void calculateLST(double T) {		
-		//420 T0=T/36525
 		T0 = T/36525.0;
 
-		//430 S=24110.5+8640184.813*T0
 		double S;
 		S = 24110.5 + 8640184.813*T0;
-		//440 S=S+86636.6*Z0+86400*L5
 		S = S + 86636.6*Z0 + 86400*L5;
 		
-		//450 S=S/86400: S=S-INT(S)
 		S = S/86400.0;
 		S = S - ((int) S);
 		
-		//460 T0=S*360*DR
 		T0 = S * 360.0 * DR;
 		//System.err.println("T0 at end of calculateLST: "+T0);
 	}
