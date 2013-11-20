@@ -9,3 +9,7 @@ issue on Page 84. Sky & Telescope has made the source code available for downloa
 [here](http://articles.adsabs.harvard.edu//full/1979ApJS...41..391V/0000391.000.html).
 
 For other related algorithms, you may find this [page](http://aa.usno.navy.mil/faq/docs/rs_algor.php) useful.
+
+## Technologies Used
+- Maven 3 (Build Tool)
+- Java 1.7
