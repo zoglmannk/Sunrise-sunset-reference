@@ -7,3 +7,5 @@ issue on Page 84. Sky & Telescope has made the source code available for downloa
 [here](http://media.skyandtelescope.com/binary/sunup.bas). The mathetmatical algorithm was published in
 1979 in the Astrophysical Journal Supplement Series, vol. 41, p. 391-411, which you can view
 [here](http://articles.adsabs.harvard.edu//full/1979ApJS...41..391V/0000391.000.html).
+
+For other related algorithms, you may find this [page](http://aa.usno.navy.mil/faq/docs/rs_algor.php) useful.
