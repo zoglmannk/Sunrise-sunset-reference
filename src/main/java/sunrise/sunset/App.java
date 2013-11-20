@@ -66,12 +66,12 @@ public class App {
 		double DD = D[1] - D[0];
 		
 		
-		for(int C0=0; C0<=23; C0++) {
-			double P = (C0+1) / 24.0;
+		for(int hourOfDay=0; hourOfDay<=23; hourOfDay++) {
+			double P = (hourOfDay+1) / 24.0;
 			double A2 = A[0] + P*DA;
 			double D2 = D[0] + P*DD;
 					
-			testHourForEvent(C0, A0, A2, D2, D0, C, Z, S, LST);
+			testHourForEvent(hourOfDay, A0, A2, D2, D0, C, Z, S, LST);
 			
 			A0=A2;
 			D0=D2;
@@ -113,11 +113,11 @@ public class App {
 	private static double V0, V2;
 	private static int M8, W8;
 	private static void testHourForEvent(
-			int C0, double A0, double A2,
+			int hourOfDay, double A0, double A2,
 			double D2, double D0, double C, 
 			double Z, double S, double LST) {
 		
-		double L0 = LST + C0*K1;
+		double L0 = LST + hourOfDay*K1;
 		double L2 = L0 + K1;
 
 		double H0 = L0 - A0;
@@ -126,7 +126,7 @@ public class App {
 		double H1 = (H2+H0) / 2.0; //  Hour angle,
 		double D1 = (D2+D0) / 2.0; //  declination at half hour
 		
-		if (C0 == 0) {
+		if (hourOfDay == 0) {
 			V0 = S * Math.sin(D0) + C*Math.cos(D0)*Math.cos(H0)-Z;
 		}
 
@@ -158,7 +158,7 @@ public class App {
 					E = (-B-D) / (2*A);
 				}
 
-				double T3=C0 + E + 1/120; //Round off
+				double T3=hourOfDay + E + 1/120; //Round off
 				int H3 = (int) T3;
 				int M3 = (int) ((T3-H3)*60);
 				System.out.format("%d:%d", H3, M3);
