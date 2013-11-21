@@ -20,7 +20,7 @@ public class Calculator {
 		double timeZoneShift = -1  * ((double)utcToLocal)/HOURS_IN_DAY;
 		
 		int julianDate = calculateJulianDate(date);
-		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC);
+		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC) + 0.5;
 
 		
 		double LST = calculateLST(daysFromEpoc, timeZoneShift, gps.longitude);
@@ -288,7 +288,9 @@ public class Calculator {
 	}
 	
 	/**
-	 * Compute Julian Date
+	 * Compute truncated Julian Date.
+	 * 
+	 * @result add +0.5 for non-truncated Julian Date
 	 */
 	private int calculateJulianDate(SimpleDate date) {		
 		int julianDate = -1 * (int) ( 7 * (((date.month+9)/12)+date.year) / 4);
@@ -308,6 +310,8 @@ public class Calculator {
 		julianDate = julianDate + (275*date.month/9) + date.day + offset;
 		julianDate = julianDate + 1721027 + (after1583 ? 2 : 0) + 367*date.year;
 
+		julianDate--; //truncate
+		
 		
 		//System.out.println("Julian date: "+julianDate);
 		return julianDate;
