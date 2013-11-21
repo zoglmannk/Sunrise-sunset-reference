@@ -9,8 +9,6 @@ public class Calculator {
 	
 	private static final double DR = Math.PI/180.0; //degrees to radians constant
 	private static final double K1 = 15.0 * DR * 1.0027379;
-
-	private static double F; //eliminate this!
 	
 	
 	/**
@@ -22,7 +20,7 @@ public class Calculator {
 		double timeZoneShift = -1  * ((double)utcToLocal)/HOURS_IN_DAY;
 		
 		int julianDate = calendarToJD(date);
-		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC) + F;
+		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC);
 
 		
 		double LST = calculateLST(daysFromEpoc, timeZoneShift, gps.longitude);
@@ -292,12 +290,7 @@ public class Calculator {
 	/**
 	 * Compute Julian Date
 	 */
-	private int calendarToJD(SimpleDate date) {
-		double D = date.day;
-			
-		int D1 = (int) D;
-		F = D - ((double) D1) - .5;
-		
+	private int calendarToJD(SimpleDate date) {		
 		int julianDate = -1 * (int) ( 7 * (((date.month+9)/12)+date.year) / 4);
 		
 		
@@ -311,13 +304,10 @@ public class Calculator {
 			offset = -1 * ( (offset/100) +1) * 3/4;
 		}
 		
-		julianDate = julianDate + (275*date.month/9) + D1 + (after1583 ? offset : 0);
-		julianDate = julianDate + 1721027 + (after1583 ? 2 : 0) + 367*date.year;
 		
-		if (F<0) {
-			F = F+1;
-			julianDate = julianDate-1;
-		}
+		julianDate = julianDate + (275*date.month/9) + date.day + offset;
+		julianDate = julianDate + 1721027 + (after1583 ? 2 : 0) + 367*date.year;
+
 		
 		//System.out.println("Julian date: "+julianDate);
 		return julianDate;
