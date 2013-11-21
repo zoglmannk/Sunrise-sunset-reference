@@ -12,6 +12,7 @@ public class Calculator {
 
 	private static double F; //eliminate this!
 	
+	
 	/**
 	 * @param gps         location of user
 	 * @param utcToLocal  offset from UTC (West is negative)
@@ -293,29 +294,25 @@ public class Calculator {
 	 */
 	private int calendarToJD(SimpleDate date) {
 		double D = date.day;
-		
-		int G=1;
-		if (date.year<1583) {
-			G=0;
-		}
-		
+			
 		int D1 = (int) D;
 		F = D - ((double) D1) - .5;
 		
 		int julianDate = -1 * (int) ( 7 * (((date.month+9)/12)+date.year) / 4);
 		
 		
-		int J3 = 0;
-		if(G!=0) {
+		int offset = 0;
+		boolean after1583 = date.year >= 1583;
+		if(after1583) {
 			int S = sgn(date.month-9);
 			int A = Math.abs(date.month-9);
 			
-			J3 = date.year + S * (A/7);
-			J3 = -1 * ( (J3/100) +1) * 3/4;
+			offset = date.year + S * (A/7);
+			offset = -1 * ( (offset/100) +1) * 3/4;
 		}
 		
-		julianDate = julianDate + (275*date.month/9) + D1 + G*J3;
-		julianDate = julianDate + 1721027 + 2*G + 367*date.year;
+		julianDate = julianDate + (275*date.month/9) + D1 + (after1583 ? offset : 0);
+		julianDate = julianDate + 1721027 + (after1583 ? 2 : 0) + 367*date.year;
 		
 		if (F<0) {
 			F = F+1;
