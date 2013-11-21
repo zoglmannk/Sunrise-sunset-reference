@@ -19,6 +19,36 @@ public class Result {
 		NO_SUNSET
 	}
 	
+	public Time getLengthOfDay() {		
+		
+		switch(typeOfDay) {
+		case SUN_UP_ALL_DAY:
+			return new Time(24,0);
+		case SUN_DOWN_ALL_DAY:
+			return new Time(0,0);
+		case NO_SUNRISE:
+			return sunSet;
+		case NO_SUNSET:
+			Time midnight = new Time(23,59);
+			return difference(midnight, sunRise);
+		default:
+			return difference(sunSet, sunRise);
+		}
+		
+	}
+	
+	private Time difference(Time t1, Time t2) {
+		int hour = t1.hour - t2.hour;
+		int min = t1.min - t2.min;
+		
+		if(min < 0) {
+			hour--;
+			min+=60;
+		}
+		
+		return new Time(hour,min);
+	}
+	
 	
 	public String toString() {
 		StringWriter sw = new StringWriter();
@@ -32,8 +62,9 @@ public class Result {
 			if(sunRise != null) {
 				writer.print(", ");
 			}
-			writer.printf("Sunset (%s, azmimuth %(.1f)\n", sunSet, setAzmith);
+			writer.printf("Sunset (%s, azmimuth %(.1f)", sunSet, setAzmith);
 		}
+		
 		
 		// potential special-message
 		switch(typeOfDay) {
@@ -52,6 +83,8 @@ public class Result {
 		default:
 			//nothing
 		}
+		
+		writer.printf(", Day Length: %s\n", getLengthOfDay());
 		
 		writer.flush();
 		return sw.getBuffer().toString();
