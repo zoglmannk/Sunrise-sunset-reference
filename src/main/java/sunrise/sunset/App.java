@@ -20,7 +20,7 @@ public class App {
 		SimpleDate date = new SimpleDate(month, day, year);
 		
 		Calculator calculator = new Calculator();
-		Result result = calculator.findSunriseSunset(gps, UTC_TO_DST, date);
+		Result result = calculator.calculateSunriseSunset(gps, UTC_TO_DST, date);
 				
 		System.out.println(result.toString());
 	}

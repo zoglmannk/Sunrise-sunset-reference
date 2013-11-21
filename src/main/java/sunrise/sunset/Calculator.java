@@ -16,10 +16,10 @@ public class Calculator {
 	 * @param utcToLocal  offset from UTC (West is negative)
 	 * @param date        date of interest for calculation
 	 */
-	public Result findSunriseSunset(GpsCoordinate gps, int utcToLocal, SimpleDate date) {
+	public Result calculateSunriseSunset(GpsCoordinate gps, int utcToLocal, SimpleDate date) {
 		double timeZoneShift = -1  * ((double)utcToLocal)/HOURS_IN_DAY;
 		
-		int julianDate = calendarToJD(date);
+		int julianDate = calculateJulianDate(date);
 		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC);
 
 		
@@ -290,7 +290,7 @@ public class Calculator {
 	/**
 	 * Compute Julian Date
 	 */
-	private int calendarToJD(SimpleDate date) {		
+	private int calculateJulianDate(SimpleDate date) {		
 		int julianDate = -1 * (int) ( 7 * (((date.month+9)/12)+date.year) / 4);
 		
 		
