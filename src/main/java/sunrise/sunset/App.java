@@ -1,11 +1,10 @@
 package sunrise.sunset;
 
 public class App {
-
-	private static double Z0;
 	
 	private static final int NEW_STANDARD_EPOC = 2451545; // January 1, 2000 at noon
 	private static final int NUM_DAYS_IN_CENTURY = 36525; // 365 days * 100 years + 25 extra days for leap years
+	private static final int HOURS_IN_DAY = 24;
 	
 	private static final double DR = Math.PI/180.0; //degrees to radians constant
 	private static final double K1 = 15.0 * DR * 1.0027379;
@@ -17,7 +16,7 @@ public class App {
 														//(west longitudes negative)
 
 	
-	private static final double H = 6; // DST offset from UTC (West is positive)
+	private static final int UTC_TO_LOCAL = -6; // DST offset from UTC (West is negative)
 	
 	private static final int MONTH = 11;
 	private static final int DAY = 19;
@@ -25,14 +24,14 @@ public class App {
 	
 	
 	public static void main(String[] args) {
-		Z0 = H/24;
+		double timeZoneShift = -1  * ((double)UTC_TO_LOCAL)/HOURS_IN_DAY;
 		
 		int julianDate = calendarToJD(MONTH, DAY, YEAR);
 		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC) + F;
 
 		
-		double LST = calculateLST(daysFromEpoc, LONGITUDE);
-		daysFromEpoc = daysFromEpoc + Z0;
+		double LST = calculateLST(daysFromEpoc, timeZoneShift, LONGITUDE);
+		daysFromEpoc = daysFromEpoc + timeZoneShift;
 		
 		
 		Position today    = calculateSunPosition(daysFromEpoc);		
@@ -44,29 +43,27 @@ public class App {
 			tomorrow = new Position(ascention, tomorrow.declination);
 		}
 		
-		double zenithDistance = DR * 90.833;
-		double S = Math.sin(LATITUDE*DR);
-		double C = Math.cos(LATITUDE*DR);
+
+		double previousAscention = today.rightAscention;
+		double previousDeclination = today.declination;
 		
-		double Z = Math.cos(zenithDistance);
-		
-		double A0 = today.rightAscention;
-		double D0 = today.declination;
-		
-		double DA = tomorrow.rightAscention - today.rightAscention;
-		double DD = tomorrow.declination - today.declination;
+		double changeInAscention   = tomorrow.rightAscention - today.rightAscention;
+		double changeInDeclination = tomorrow.declination    - today.declination;
 		
 		
 		for(int hourOfDay=0; hourOfDay<=23; hourOfDay++) {
-			double P = (hourOfDay+1) / 24.0;
-			double A2 = today.rightAscention + P*DA;
-			double D2 = today.declination + P*DD;
+			double fractionOfDay = (hourOfDay+1) / ((double)HOURS_IN_DAY);
+			double asention    = today.rightAscention + fractionOfDay*changeInAscention;
+			double declination = today.declination    + fractionOfDay*changeInDeclination;
 					
-			testHourForEvent(hourOfDay, A0, A2, D2, D0, C, Z, S, LST);
+			testHourForEvent(hourOfDay, 
+					         previousAscention,   asention, 
+					         previousDeclination, declination,
+					         LST);
 			
-			A0=A2;
-			D0=D2;
-			V0=V2;
+			previousAscention   = asention;
+			previousDeclination = declination;
+			previousV=V;
 		}
 
 		maybePrintSpecialMessage();
@@ -78,11 +75,11 @@ public class App {
 	 */
 	private static void maybePrintSpecialMessage() {
 		if(!sunriseFound && !sunsetFound) {
-			if (V2 < 0) {
+			if (V < 0) {
 				System.out.println("Sun down all day");
 			}
 			
-			if (V2 > 0) {
+			if (V > 0) {
 				System.out.println("Sun up all day");
 			}
 			
@@ -98,48 +95,66 @@ public class App {
 	}
 	
 	
+	private static class Time {
+		int hour;
+		int min;
+	}
+	
+	private static class Result {
+		Time sunRise, sunSet;
+		double riseAzmith, setAzmith;
+		double V;
+	}
+	
+	
+	
 	/**
 	 * Test an hour for an event
 	 */
-	private static double V0, V2;
+	private static double previousV, V;
 	private static boolean sunriseFound, sunsetFound;
 	private static void testHourForEvent(
-			int hourOfDay, double A0, double A2,
-			double D2, double D0, double C, 
-			double Z, double S, double LST) {
+			int hourOfDay, double previousAscention, double ascention,
+			double previousDeclination, double declination, double LST) {
+		
+		double zenithDistance = DR * 90.833;
+		
+		double S = Math.sin(LATITUDE*DR);
+		double C = Math.cos(LATITUDE*DR);
+		double Z = Math.cos(zenithDistance);
 		
 		double L0 = LST + hourOfDay*K1;
 		double L2 = L0 + K1;
 
-		double H0 = L0 - A0;
-		double H2 = L2 - A2;
+		double H0 = L0 - previousAscention;
+		double H2 = L2 - ascention;
 		
 		double H1 = (H2+H0) / 2.0; //  Hour angle,
-		double D1 = (D2+D0) / 2.0; //  declination at half hour
+		double D1 = (declination+previousDeclination) / 2.0; //  declination at half hour
 		
 		if (hourOfDay == 0) {
-			V0 = S * Math.sin(D0) + C*Math.cos(D0)*Math.cos(H0)-Z;
+			previousV = S * Math.sin(previousDeclination) + C*Math.cos(previousDeclination)*Math.cos(H0)-Z;
 		}
 
-		V2 = S*Math.sin(D2) + C*Math.cos(D2)*Math.cos(H2) - Z;
+		V = S*Math.sin(declination) + C*Math.cos(declination)*Math.cos(H2) - Z;
 		
-		if(sgn(V0) != sgn(V2)) {
+		if(sunCrossedHorizon()) {
 			double V1 = S*Math.sin(D1) + C*Math.cos(D1)*Math.cos(H1) - Z;
 			
-			double A = 2*V2 - 4*V1 + 2*V0;
-			double B = 4*V1 - 3*V0 - V2;
+			double A = 2*V - 4*V1 + 2*previousV;
+			double B = 4*V1 - 3*previousV - V;
 			
-			double D = B*B - 4*A*V0;
+			double D = B*B - 4*A*previousV;
 			if (D >= 0) {
 				D = Math.sqrt(D);
 				
-				if (V0<0 && V2>0) {
+				if (previousV<0 && V>0) {
 					System.out.print("Sunrise at ");
 					sunriseFound = true;
 					
 				}
 
-				if (V0>0 && V2<0) {
+				if (previousV>0 && V<0) {
 					System.out.print("Sunset at ");
 					sunsetFound = true;
 				}
@@ -158,25 +173,30 @@ public class App {
 				double H7 = H0 + E*(H2-H0);
 				double N7 = -1 * Math.cos(D1)*Math.sin(H7);
 				double D7 = C*Math.sin(D1) - S*Math.cos(D1)*Math.cos(H7);
-				double AZ = Math.atan(N7/D7)/DR;
+				double azmith = Math.atan(N7/D7)/DR;
 				
 				if(D7 < 0) {
-					AZ = AZ+180;
+					azmith = azmith+180;
 				}
 
-				if(AZ < 0) {
-					AZ = AZ+360;
+				if(azmith < 0) {
+					azmith = azmith+360;
 				}
 
-				if(AZ > 360) {
-					AZ = AZ-360;
+				if(azmith > 360) {
+					azmith = azmith-360;
 				}
 
-				System.out.format(", azimuth %(.1f \n", AZ);				
+				System.out.format(", azimuth %(.1f \n", azmith);				
 			}
 
 		}
 		
+	}
+
+
+	private static boolean sunCrossedHorizon() {
+		return sgn(previousV) != sgn(V);
 	}
 	
 	private static int sgn(double val) {
@@ -243,13 +263,13 @@ public class App {
 	/**
 	 * calculate LST at 0h zone time
 	 */
-	private static double calculateLST(double daysFromEpoc, double longitude) {
+	private static double calculateLST(double daysFromEpoc, double timeZoneShift, double longitude) {
 		double L = longitude/360;
 		double ret = daysFromEpoc/36525.0;
 
 		double S;
 		S = 24110.5 + 8640184.813*ret;
-		S = S + 86636.6*Z0 + 86400*L;
+		S = S + 86636.6*timeZoneShift + 86400*L;
 		
 		S = S/86400.0;
 		S = S - ((int) S);
