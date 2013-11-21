@@ -2,8 +2,6 @@ package sunrise.sunset;
 
 public class App {
 
-	private static double[] A = new double[2];
-	private static double[] D = new double[2];
 	private static double Z0;
 	
 	private static final int NEW_STANDARD_EPOC = 2451545; // January 1, 2000 at noon
@@ -37,39 +35,32 @@ public class App {
 		daysFromEpoc = daysFromEpoc + Z0;
 		
 		
-		calculateSunPosition(daysFromEpoc);
-		A[0] = A5;
-		D[0] = D5;
+		Position today    = calculateSunPosition(daysFromEpoc);		
+		Position tomorrow = calculateSunPosition(daysFromEpoc+1);
 		
 		
-		calculateSunPosition(daysFromEpoc+1);
-		A[1] = A5;
-		D[1] = D5;
-		
-		
-		if (A[1] < A[0]) {
-			A[1] = A[1]+2*Math.PI;
+		if (tomorrow.rightAscention < today.rightAscention) {
+			double ascention = tomorrow.rightAscention+2*Math.PI;
+			tomorrow = new Position(ascention, tomorrow.declination);
 		}
-		double zenithDistance = DR * 90.833;
 		
+		double zenithDistance = DR * 90.833;
 		double S = Math.sin(LATITUDE*DR);
 		double C = Math.cos(LATITUDE*DR);
 		
 		double Z = Math.cos(zenithDistance);
-		M8 = 0;
-		W8 = 0;
 		
-		double A0 = A[0];
-		double D0 = D[0];
+		double A0 = today.rightAscention;
+		double D0 = today.declination;
 		
-		double DA = A[1] - A[0];
-		double DD = D[1] - D[0];
+		double DA = tomorrow.rightAscention - today.rightAscention;
+		double DD = tomorrow.declination - today.declination;
 		
 		
 		for(int hourOfDay=0; hourOfDay<=23; hourOfDay++) {
 			double P = (hourOfDay+1) / 24.0;
-			double A2 = A[0] + P*DA;
-			double D2 = D[0] + P*DD;
+			double A2 = today.rightAscention + P*DA;
+			double D2 = today.declination + P*DD;
 					
 			testHourForEvent(hourOfDay, A0, A2, D2, D0, C, Z, S, LST);
 			
@@ -86,7 +77,7 @@ public class App {
 	 * Special-message routine
 	 */
 	private static void maybePrintSpecialMessage() {
-		if(M8==0 && W8==0) {
+		if(!sunriseFound && !sunsetFound) {
 			if (V2 < 0) {
 				System.out.println("Sun down all day");
 			}
@@ -96,11 +87,11 @@ public class App {
 			}
 			
 		} else {
-			if(M8==0) {
+			if(!sunriseFound) {
 				System.out.println("No sunrise this date");
 			}
 		
-			if(W8==0) {
+			if(!sunsetFound) {
 				System.out.println("No sunset this date");
 			}
 		}
@@ -111,7 +102,7 @@ public class App {
 	 * Test an hour for an event
 	 */
 	private static double V0, V2;
-	private static int M8, W8;
+	private static boolean sunriseFound, sunsetFound;
 	private static void testHourForEvent(
 			int hourOfDay, double A0, double A2,
 			double D2, double D0, double C, 
@@ -144,13 +135,13 @@ public class App {
 				
 				if (V0<0 && V2>0) {
 					System.out.print("Sunrise at ");
-					M8 = 1;
+					sunriseFound = true;
 					
 				}
 
 				if (V0>0 && V2<0) {
 					System.out.print("Sunset at ");
-					W8 = 1;
+					sunsetFound = true;
 				}
 
 				double E = (-B+D) / (2*A);
@@ -192,10 +183,20 @@ public class App {
 		return val == 0 ? 0 : (val > 0 ? 1 : 0);
 	}
 	
-	
-	private static double A5, D5;
-	private static void calculateSunPosition(double daysFromEpoc) {
+	private static class Position {
+		final double rightAscention, //A5 
+		             declination;    //D5
 		
+		
+		public Position(double rightAscention, double declination) {
+			this.rightAscention = rightAscention;
+			this.declination = declination;
+		}
+		
+	}
+	
+	
+	private static Position calculateSunPosition(double daysFromEpoc) {
 		double numCenturiesSince1900 = daysFromEpoc/NUM_DAYS_IN_CENTURY + 1;
 		
 		//   Fundamental arguments 
@@ -230,12 +231,13 @@ public class App {
 		
 		//    Compute Sun's RA and Dec		
 		double S = W / Math.sqrt(U - V*V);
-		A5 = meanLongitudinal + Math.atan(S / Math.sqrt(1 - S*S));
+		double rightAscention = meanLongitudinal + Math.atan(S / Math.sqrt(1 - S*S));
 		
 		S = V / Math.sqrt(U);
-		D5 = Math.atan(S / Math.sqrt(1 - S*S));
+		double declination = Math.atan(S / Math.sqrt(1 - S*S));
 		
-		//System.err.println("calculateSunPosition: ("+A5+","+D5+")");
+		//System.err.println("calculateSunPosition: ("+rightAscention+","+declination+")");
+		return new Position(rightAscention, declination);
 	}
 	
 	/**
