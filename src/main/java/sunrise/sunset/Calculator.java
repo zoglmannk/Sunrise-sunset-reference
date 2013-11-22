@@ -135,14 +135,13 @@ public class Calculator {
 	/**
 	 * Test an hour for an event
 	 */
-	private static final double CIVIL_TWILIGHT_OFFSET = 5.8; // 6 degrees below horizon
-	private static final double NAUTICAL_TWILIGHT_OFFSET = 11.8;
-	private static final double ASTRONOMICAL_TWILIGHT_OFFSET=17.8;
+	private static final double CIVIL_TWILIGHT_OFFSET = -5.8; // degrees above or below horizon
+	private static final double NAUTICAL_TWILIGHT_OFFSET = -11.8;
+	private static final double ASTRONOMICAL_TWILIGHT_OFFSET= -17.8;
+	private static final double GOLDEN_HOUR_OFFSET= 10.0;
 	
-	private static final double GOLDEN_HOUR_OFFSET= -10.0;
 	
-	
-	private static final double DEGREE_OFFSET = -10;
+	private static final double DEGREE_OFFSET = 0;
 	private TestResult testHourForEvent(
 			int hourOfDay, 
 			double previousAscention, double ascention,
@@ -159,7 +158,7 @@ public class Calculator {
 		
 		double S = Math.sin(gps.latitude*DR);
 		double C = Math.cos(gps.latitude*DR);
-		double Z = Math.cos(zenithDistance);
+		double Z = Math.cos(zenithDistance) + DEGREE_OFFSET*DR;
 		
 		double L0 = LST + hourOfDay*K1;
 		double L2 = L0 + K1;
@@ -175,20 +174,13 @@ public class Calculator {
 		}
 
 		double V = S*Math.sin(declination) + C*Math.cos(declination)*Math.cos(H2) - Z;
-		//System.err.println("V: "+(V/DR) +"\thourOfDay: "+hourOfDay);
 		
 		if(sunCrossedHorizon(previousV, V)) {
 			double V1 = S*Math.sin(D1) + C*Math.cos(D1)*Math.cos(H1) - Z;
 			
-			
-			double previousVA = previousV+(DEGREE_OFFSET*DR); 
-			double VA  = V+(DEGREE_OFFSET*DR);
-			double VA1 = V1+(DEGREE_OFFSET*DR);
-			
-			
-			double A = 2*VA - 4*VA1 + 2*previousVA;
-			double B = 4*VA1 - 3*previousVA - VA;
-			double D = B*B - 4*A*previousVA;
+			double A = 2*V - 4*V1 + 2*previousV;
+			double B = 4*V1 - 3*previousV - V;
+			double D = B*B - 4*A*previousV;
 
 			if (D >= 0) {
 				D = Math.sqrt(D);
@@ -221,13 +213,12 @@ public class Calculator {
 				int min = (int) ((T3-hour)*60);
 				
 				
-				if (previousV+(DEGREE_OFFSET*DR)<0 && V+(DEGREE_OFFSET*DR)>0) {
+				if (previousV<0 && V>0) {
 					ret.sunRise = new Time(hour, min);
 					ret.riseAzmith = azmith;
-					System.err.println("Got here! "+ret.sunRise);
 				}
 
-				if (previousV+(DEGREE_OFFSET*DR)>0 && V+(DEGREE_OFFSET*DR)<0) {
+				if (previousV>0 && V<0) {
 					ret.sunSet = new Time(hour, min);
 					ret.setAzmith = azmith;
 				}				
@@ -243,8 +234,6 @@ public class Calculator {
 
 
 	private boolean sunCrossedHorizon(double previousV, double V) {
-		previousV += DEGREE_OFFSET*DR; V += DEGREE_OFFSET*DR;
-		//System.err.println("previousV: "+previousV/DR+"\tV: "+V/DR+"\tdid cross: "+(sgn(previousV) != sgn(V)));
 		return sgn(previousV) != sgn(V);
 	}
 	
