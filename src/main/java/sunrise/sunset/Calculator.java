@@ -78,7 +78,28 @@ public class Calculator {
 		
 		
 		result.typeOfDay = findTypeOfDay(result, testResult.V);
+		setSolarNoon(result);
 		return result;
+	}
+	
+	private void setSolarNoon(Result result) {
+		switch(result.typeOfDay) {
+		case NORMAL_DAY:
+			Time lengthOfDay = result.getLengthOfDay();
+			int totalMins = (lengthOfDay.hour*60 + lengthOfDay.min)/2;
+			
+			int hour = result.sunRise.hour + (totalMins/60);
+			int min  = result.sunRise.min  + (totalMins%60);
+			
+			if(min > 60) {
+				hour++;
+				min = min - 60;
+			}
+			result.solarNoon = new Time(hour, min);
+			break;
+		default:
+			result.solarNoon = null;
+		}
 	}
 	
 	

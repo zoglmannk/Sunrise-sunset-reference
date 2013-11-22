@@ -6,7 +6,7 @@ import java.io.StringWriter;
 
 public class Result {
 	
-	public Time sunRise, sunSet;
+	public Time sunRise, sunSet, solarNoon;
 	public double riseAzmith, setAzmith;
 	public TypeOfDay typeOfDay;
 	
@@ -84,7 +84,13 @@ public class Result {
 			//nothing
 		}
 		
-		writer.printf(", Day Length: %s\n", getLengthOfDay());
+		writer.printf(", Day Length: %s", getLengthOfDay());
+		
+		if(solarNoon==null) {
+			writer.println("");
+		} else {
+			writer.println(", Solar Noon: "+solarNoon);
+		}
 		
 		writer.flush();
 		return sw.getBuffer().toString();
