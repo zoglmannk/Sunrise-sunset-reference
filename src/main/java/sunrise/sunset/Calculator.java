@@ -11,12 +11,29 @@ public class Calculator {
 	private static final double K1 = 15.0 * DR * 1.0027379;
 	
 	
+	// Note that the definition of civil, nautical, and astronomical twilight is defined 
+	// respectively as 6, 12, and 18 degrees below the horizon. I'm choosing a slightly 
+	// different offset because it seems to better match published times over a wide
+	// range of dates. Negative values mean below the horizon. Positive are above the
+	// horizon.
+	private static final double SUNRISE_SUNET_OFFSET = 0;
+	private static final double CIVIL_TWILIGHT_OFFSET = -5.8;
+	private static final double NAUTICAL_TWILIGHT_OFFSET = -11.8;
+	private static final double ASTRONOMICAL_TWILIGHT_OFFSET= -17.8;
+	private static final double GOLDEN_HOUR_OFFSET= 10.0;
+	
+	
 	/**
 	 * @param gps         location of user
 	 * @param utcToLocal  offset from UTC (West is negative)
 	 * @param date        date of interest for calculation
 	 */
-	public Result calculateSunriseSunset(GpsCoordinate gps, int utcToLocal, SimpleDate date) {
+	public Result calculate (
+			GpsCoordinate gps, 
+			int utcToLocal, 
+			SimpleDate date) {
+		
+		
 		double timeZoneShift = -1  * ((double)utcToLocal)/HOURS_IN_DAY;
 		
 		int julianDate = calculateJulianDate(date);
@@ -37,6 +54,32 @@ public class Calculator {
 		}
 		
 
+		Result sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, today, tomorrow);
+		Result goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, today, tomorrow);
+		Result civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, today, tomorrow);
+		Result nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, today, tomorrow);
+		Result astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, today, tomorrow);
+		
+		Result combined = sunriseSunset;
+		combined.goldenHourBegin = goldenHour.sunRise;
+		combined.goldenHourEnd   = goldenHour.sunSet;
+		combined.civilTwilightBegin = civilTwilight.sunRise;
+		combined.civilTwilightEnd  = civilTwilight.sunSet;
+		combined.nauticalTwilightBegin = nauticalTwilight.sunRise;
+		combined.nauticalTwilightEnd   = nauticalTwilight.sunSet;
+		combined.astronomicalTwilightBegin = astronomicalTwilight.sunRise;
+		combined.astronomicalTwilightEnd   = astronomicalTwilight.sunSet;
+		
+		return combined; 
+	}
+
+	private Result calculate(
+			double horizonOffset, //in degrees
+			GpsCoordinate gps, 
+			double LST, 
+			Position today,
+			Position tomorrow) {
+		
 		double previousAscention = today.rightAscention;
 		double previousDeclination = today.declination;
 		
@@ -55,7 +98,7 @@ public class Calculator {
 			double asention    = today.rightAscention + fractionOfDay*changeInAscention;
 			double declination = today.declination    + fractionOfDay*changeInDeclination;
 					
-			testResult =  testHourForEvent(hourOfDay, 
+			testResult =  testHourForEvent(hourOfDay, horizonOffset,
 										   previousAscention,   asention, 
 										   previousDeclination, declination,
 										   previousV, gps, LST);
@@ -134,20 +177,24 @@ public class Calculator {
 	
 	/**
 	 * Test an hour for an event
-	 */
+	 */	
 	private TestResult testHourForEvent(
-			int hourOfDay, 
+			int hourOfDay, double degreeOffset,
 			double previousAscention, double ascention,
 			double previousDeclination, double declination, 
 			double previousV, 
 			GpsCoordinate gps, double LST) {
+
 		
 		TestResult ret = new TestResult();
-		double zenithDistance = DR * 90.833;
+		
+		//90.833 is for atmospheric refraction when sun is at the horizon.
+		//ie the sun slips below the horizon at sunset before you actually see it go below the horizon
+		double zenithDistance = DR * (degreeOffset == 0 ? 90.833 : 90.0); 
 		
 		double S = Math.sin(gps.latitude*DR);
 		double C = Math.cos(gps.latitude*DR);
-		double Z = Math.cos(zenithDistance);
+		double Z = Math.cos(zenithDistance) + degreeOffset*DR;
 		
 		double L0 = LST + hourOfDay*K1;
 		double L2 = L0 + K1;
@@ -169,8 +216,8 @@ public class Calculator {
 			
 			double A = 2*V - 4*V1 + 2*previousV;
 			double B = 4*V1 - 3*previousV - V;
-			
 			double D = B*B - 4*A*previousV;
+
 			if (D >= 0) {
 				D = Math.sqrt(D);
 				

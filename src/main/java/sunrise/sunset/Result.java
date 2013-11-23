@@ -10,6 +10,12 @@ public class Result {
 	public double riseAzmith, setAzmith;
 	public TypeOfDay typeOfDay;
 	
+	public Time astronomicalTwilightBegin, astronomicalTwilightEnd;
+	public Time nauticalTwilightBegin, nauticalTwilightEnd;
+	public Time civilTwilightBegin, civilTwilightEnd;
+	
+	public Time goldenHourBegin, goldenHourEnd;
+	
 	
 	public enum TypeOfDay {
 		NORMAL_DAY,
@@ -91,6 +97,23 @@ public class Result {
 		} else {
 			writer.println(", Solar Noon: "+solarNoon);
 		}
+
+		writer.printf("Golden Hour          : (%s, %s)\n", 
+				      (goldenHourBegin == null ? "null" : goldenHourBegin),
+				      (goldenHourEnd == null ? "null" : goldenHourEnd));
+		
+		writer.printf("Civil Twilight       : (%s, %s)\n", 
+					  (civilTwilightBegin == null ? "null" : civilTwilightBegin),
+					  (civilTwilightEnd == null ? "null" : civilTwilightEnd));
+		
+		writer.printf("Nautical Twilight    : (%s, %s)\n", 
+					  (nauticalTwilightBegin == null ? "null" : nauticalTwilightBegin),
+					  (nauticalTwilightEnd == null ? "null" : nauticalTwilightEnd));
+		
+		writer.printf("Astronomical Twilight: (%s, %s)\n", 
+					  (astronomicalTwilightBegin == null ? "null" : astronomicalTwilightBegin),
+					  (astronomicalTwilightEnd == null ? "null" : astronomicalTwilightEnd));
+
 		
 		writer.flush();
 		return sw.getBuffer().toString();
