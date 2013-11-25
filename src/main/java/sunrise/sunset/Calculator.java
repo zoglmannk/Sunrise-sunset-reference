@@ -291,7 +291,7 @@ public class Calculator {
 	/**
 	 * drops any full revolutions and then converts revolutions to radians 
 	 */
-	private double revolutionsToRadians(double revolutions) {
+	private double revolutionsToTruncatedRadians(double revolutions) {
 		return 2*Math.PI*(revolutions - ((int) revolutions));
 	}
 	
@@ -300,55 +300,60 @@ public class Calculator {
 		
 		//   Fundamental arguments 
 		//   (Van Flandern & Pulkkinen, 1979)
-		double meanLongitudinalOfSun = revolutionsToRadians(.779072 + .00273790931*daysFromEpoc);
-		double meanAnomalyOfSun      = revolutionsToRadians(.993126 + .00273777850*daysFromEpoc);
+		double meanLongitudeOfSun = revolutionsToTruncatedRadians(.779072 + .00273790931*daysFromEpoc);
+		double meanAnomalyOfSun   = revolutionsToTruncatedRadians(.993126 + .00273777850*daysFromEpoc);
 		
-		double meanLongitudinalOfMoon        = revolutionsToRadians(.606434 + .03660110129*daysFromEpoc);
-		double longitudeOfLunarAscendingNode = revolutionsToRadians(.347343 - .00014709391*daysFromEpoc);
-		double meanAnomalyOfVenus            = revolutionsToRadians(.140023 + .00445036173*daysFromEpoc);
-		double meanAnomalyOfMars             = revolutionsToRadians(.053856 + .00145561327*daysFromEpoc);
-		double meanAnomalyOfJupiter          = revolutionsToRadians(.056531 + .00023080893*daysFromEpoc);
+		double meanLongitudinalOfMoon        = revolutionsToTruncatedRadians(.606434 + .03660110129*daysFromEpoc);
+		double longitudeOfLunarAscendingNode = revolutionsToTruncatedRadians(.347343 - .00014709391*daysFromEpoc);
+		double meanAnomalyOfVenus            = revolutionsToTruncatedRadians(.140023 + .00445036173*daysFromEpoc);
+		double meanAnomalyOfMars             = revolutionsToTruncatedRadians(.053856 + .00145561327*daysFromEpoc);
+		double meanAnomalyOfJupiter          = revolutionsToTruncatedRadians(.056531 + .00023080893*daysFromEpoc);
 
 
 		double V;
-		V =     .39785 * Math.sin(meanLongitudinalOfSun);
-		V = V - .01000 * Math.sin(meanLongitudinalOfSun-meanAnomalyOfSun);
-		V = V + .00333 * Math.sin(meanLongitudinalOfSun+meanAnomalyOfSun);
-		V = V - .00021 * numCenturiesSince1900 * Math.sin(meanLongitudinalOfSun);
-		V = V + .00004 * Math.sin(meanLongitudinalOfSun+2*meanAnomalyOfSun);
-		V = V - .00004 * Math.cos(meanLongitudinalOfSun);
-		V = V - .00004 * Math.sin(longitudeOfLunarAscendingNode-meanLongitudinalOfSun);
-		V = V + .00003 * numCenturiesSince1900 * Math.sin(meanLongitudinalOfSun-meanAnomalyOfSun);
+		V =     .39785 * Math.sin(meanLongitudeOfSun);
+		V = V - .01000 * Math.sin(meanLongitudeOfSun-meanAnomalyOfSun);
+		V = V + .00333 * Math.sin(meanLongitudeOfSun+meanAnomalyOfSun);
+		V = V - .00021 * numCenturiesSince1900 * Math.sin(meanLongitudeOfSun);
+		V = V + .00004 * Math.sin(meanLongitudeOfSun+2*meanAnomalyOfSun);
+		V = V - .00004 * Math.cos(meanLongitudeOfSun);
+		V = V - .00004 * Math.sin(longitudeOfLunarAscendingNode-meanLongitudeOfSun);
+		V = V + .00003 * numCenturiesSince1900 * Math.sin(meanLongitudeOfSun-meanAnomalyOfSun);
 		
 		double U;
 		U = 1 - .03349 * Math.cos(meanAnomalyOfSun);
-		U = U - .00014 * Math.cos(2*meanLongitudinalOfSun);
-		U = U + .00008 * Math.cos(meanLongitudinalOfSun);
+		U = U - .00014 * Math.cos(2*meanLongitudeOfSun);
+		U = U + .00008 * Math.cos(meanLongitudeOfSun);
 		U = U - .00003 * Math.sin(meanAnomalyOfSun-meanAnomalyOfJupiter);
 
 		double W;
-		W =    -.04129 * Math.sin(2*meanLongitudinalOfSun);
+		W =    -.04129 * Math.sin(2*meanLongitudeOfSun);
 		W = W + .03211 * Math.sin(meanAnomalyOfSun);
-		W = W + .00104 * Math.sin(2*meanLongitudinalOfSun-meanAnomalyOfSun);
-		W = W - .00035 * Math.sin(2*meanLongitudinalOfSun+meanAnomalyOfSun);
+		W = W + .00104 * Math.sin(2*meanLongitudeOfSun-meanAnomalyOfSun);
+		W = W - .00035 * Math.sin(2*meanLongitudeOfSun+meanAnomalyOfSun);
 		W = W - .00010;
 		W = W - .00008 * numCenturiesSince1900 * Math.sin(meanAnomalyOfSun);
 		W = W - .00008 * Math.sin(longitudeOfLunarAscendingNode);
 		W = W + .00007 * Math.sin(2*meanAnomalyOfSun);
-		W = W + .00005 * numCenturiesSince1900 * Math.sin(2*meanLongitudinalOfSun);
-		W = W + .00003 * Math.sin(meanLongitudinalOfMoon-meanLongitudinalOfSun);
+		W = W + .00005 * numCenturiesSince1900 * Math.sin(2*meanLongitudeOfSun);
+		W = W + .00003 * Math.sin(meanLongitudinalOfMoon-meanLongitudeOfSun);
 		W = W - .00002 * Math.cos(meanAnomalyOfSun-meanAnomalyOfJupiter);
 		W = W + .00002 * Math.sin(4*meanAnomalyOfSun-8*meanAnomalyOfMars+3*meanAnomalyOfJupiter);
 		W = W - .00002 * Math.sin(meanAnomalyOfSun-meanAnomalyOfVenus);
 		W = W - .00002 * Math.cos(2*meanAnomalyOfSun-2*meanAnomalyOfVenus);
 		
-		
-		//    Compute Sun's RA and Dec		
+		return calculatePosition(meanLongitudeOfSun, U, V, W);
+	}
+
+	/**
+	 * Calculates RA (Right Ascension) and Dec (Declination) from
+	 * intermediate calculations 
+	 */
+	private Position calculatePosition(double meanLongitude, double U, double V, double W) {
 		double S = W / Math.sqrt(U - V*V);
-		double rightAscention = meanLongitudinalOfSun + Math.atan(S / Math.sqrt(1 - S*S));
+		double rightAscention = meanLongitude + Math.asin(S);
 		
-		S = V / Math.sqrt(U);
-		double declination = Math.atan(S / Math.sqrt(1 - S*S));
+		double declination = Math.asin(V / Math.sqrt(U));
 		
 		//System.err.println("calculateSunPosition: ("+rightAscention+","+declination+")");
 		return new Position(rightAscention, declination);
