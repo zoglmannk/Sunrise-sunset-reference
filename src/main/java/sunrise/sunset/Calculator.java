@@ -13,12 +13,11 @@ public class Calculator {
 	
 	// Note that the definition of civil, nautical, and astronomical twilight is defined 
 	// respectively as 6, 12, and 18 degrees below the horizon. I'm choosing a slightly 
-	// different offset because it seems to better match published times over a wide
-	// range of dates. Negative values mean below the horizon. Positive are above the
-	// horizon.
+	// different astronomical offset to better match published times over a wide range 
+	// of dates. Negative values mean below the horizon. Positive are above the horizon.
 	private static final double SUNRISE_SUNET_OFFSET = 0;
-	private static final double CIVIL_TWILIGHT_OFFSET = -5.8;
-	private static final double NAUTICAL_TWILIGHT_OFFSET = -11.8;
+	private static final double CIVIL_TWILIGHT_OFFSET = -6;
+	private static final double NAUTICAL_TWILIGHT_OFFSET = -12;
 	private static final double ASTRONOMICAL_TWILIGHT_OFFSET= -17.8;
 	private static final double GOLDEN_HOUR_OFFSET= 10.0;
 	
@@ -289,43 +288,64 @@ public class Calculator {
 		
 	}
 	
+	/**
+	 * drops any full revolutions and then converts revolutions to radians 
+	 */
+	private double revolutionsToRadians(double revolutions) {
+		return 2*Math.PI*(revolutions - ((int) revolutions));
+	}
 	
-	private  Position calculateSunPosition(double daysFromEpoc) {
+	private Position calculateSunPosition(double daysFromEpoc) {
 		double numCenturiesSince1900 = daysFromEpoc/NUM_DAYS_IN_CENTURY + 1;
 		
 		//   Fundamental arguments 
 		//   (Van Flandern & Pulkkinen, 1979)
-		double meanLongitudinal = .779072 + .00273790931*daysFromEpoc;
-		double meanAnomaly      = .993126 + .00273777850*daysFromEpoc;
+		double meanLongitudinalOfSun = revolutionsToRadians(.779072 + .00273790931*daysFromEpoc);
+		double meanAnomalyOfSun      = revolutionsToRadians(.993126 + .00273777850*daysFromEpoc);
+		
+		double meanLongitudinalOfMoon        = revolutionsToRadians(.606434 + .03660110129*daysFromEpoc);
+		double longitudeOfLunarAscendingNode = revolutionsToRadians(.347343 - .00014709391*daysFromEpoc);
+		double meanAnomalyOfVenus            = revolutionsToRadians(.140023 + .00445036173*daysFromEpoc);
+		double meanAnomalyOfMars             = revolutionsToRadians(.053856 + .00145561327*daysFromEpoc);
+		double meanAnomalyOfJupiter          = revolutionsToRadians(.056531 + .00023080893*daysFromEpoc);
 
-		meanLongitudinal = meanLongitudinal - ((int) meanLongitudinal);
-		meanAnomaly      = meanAnomaly      - ((int) meanAnomaly);
-
-		meanLongitudinal = meanLongitudinal * 2*Math.PI;
-		meanAnomaly      = meanAnomaly      * 2*Math.PI;
 
 		double V;
-		V = .39785 * Math.sin(meanLongitudinal);
-		V = V - .01000 * Math.sin(meanLongitudinal-meanAnomaly);
-		V = V + .00333 * Math.sin(meanLongitudinal+meanAnomaly);
-		V = V - .00021 * numCenturiesSince1900 * Math.sin(meanLongitudinal);
+		V =     .39785 * Math.sin(meanLongitudinalOfSun);
+		V = V - .01000 * Math.sin(meanLongitudinalOfSun-meanAnomalyOfSun);
+		V = V + .00333 * Math.sin(meanLongitudinalOfSun+meanAnomalyOfSun);
+		V = V - .00021 * numCenturiesSince1900 * Math.sin(meanLongitudinalOfSun);
+		V = V + .00004 * Math.sin(meanLongitudinalOfSun+2*meanAnomalyOfSun);
+		V = V - .00004 * Math.cos(meanLongitudinalOfSun);
+		V = V - .00004 * Math.sin(longitudeOfLunarAscendingNode-meanLongitudinalOfSun);
+		V = V + .00003 * numCenturiesSince1900 * Math.sin(meanLongitudinalOfSun-meanAnomalyOfSun);
 		
 		double U;
-		U = 1 - .03349 * Math.cos(meanAnomaly);
-		U = U - .00014 * Math.cos(2*meanLongitudinal);
-		U = U + .00008 * Math.cos(meanLongitudinal);
+		U = 1 - .03349 * Math.cos(meanAnomalyOfSun);
+		U = U - .00014 * Math.cos(2*meanLongitudinalOfSun);
+		U = U + .00008 * Math.cos(meanLongitudinalOfSun);
+		U = U - .00003 * Math.sin(meanAnomalyOfSun-meanAnomalyOfJupiter);
 
 		double W;
-		W = -.00010 - .04129 * Math.sin(2*meanLongitudinal);
-		W = W + .03211 * Math.sin(meanAnomaly);
-		W = W + .00104 * Math.sin(2*meanLongitudinal-meanAnomaly);
-		W = W - .00035 * Math.sin(2*meanLongitudinal+meanAnomaly);
-		W = W - .00008 * numCenturiesSince1900 * Math.sin(meanAnomaly);
+		W = -.04129 * Math.sin(2*meanLongitudinalOfSun);
+		W = W + .03211 * Math.sin(meanAnomalyOfSun);
+		W = W + .00104 * Math.sin(2*meanLongitudinalOfSun-meanAnomalyOfSun);
+		W = W - .00035 * Math.sin(2*meanLongitudinalOfSun+meanAnomalyOfSun);
+		W = W - .00010;
+		W = W - .00008 * numCenturiesSince1900 * Math.sin(meanAnomalyOfSun);
+		W = W - .00008 * Math.sin(longitudeOfLunarAscendingNode);
+		W = W + .00007 * Math.sin(2*meanAnomalyOfSun);
+		W = W + .00005 * numCenturiesSince1900 * Math.sin(2*meanLongitudinalOfSun);
+		W = W + .00003 * Math.sin(meanLongitudinalOfMoon-meanLongitudinalOfSun);
+		W = W - .00002 * Math.cos(meanAnomalyOfSun-meanAnomalyOfJupiter);
+		W = W + .00002 * Math.sin(4*meanAnomalyOfSun-8*meanAnomalyOfMars+3*meanAnomalyOfJupiter);
+		W = W - .00002 * Math.sin(meanAnomalyOfSun-meanAnomalyOfVenus);
+		W = W - .00002 * Math.cos(2*meanAnomalyOfSun-2*meanAnomalyOfVenus);
 		
 		
 		//    Compute Sun's RA and Dec		
 		double S = W / Math.sqrt(U - V*V);
-		double rightAscention = meanLongitudinal + Math.atan(S / Math.sqrt(1 - S*S));
+		double rightAscention = meanLongitudinalOfSun + Math.atan(S / Math.sqrt(1 - S*S));
 		
 		S = V / Math.sqrt(U);
 		double declination = Math.atan(S / Math.sqrt(1 - S*S));
