@@ -327,7 +327,7 @@ public class Calculator {
 		U = U - .00003 * Math.sin(meanAnomalyOfSun-meanAnomalyOfJupiter);
 
 		double W;
-		W = -.04129 * Math.sin(2*meanLongitudinalOfSun);
+		W =    -.04129 * Math.sin(2*meanLongitudinalOfSun);
 		W = W + .03211 * Math.sin(meanAnomalyOfSun);
 		W = W + .00104 * Math.sin(2*meanLongitudinalOfSun-meanAnomalyOfSun);
 		W = W - .00035 * Math.sin(2*meanLongitudinalOfSun+meanAnomalyOfSun);
