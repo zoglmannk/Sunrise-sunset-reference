@@ -106,11 +106,9 @@ public class Result {
 		writer.printf("Today's Moonrise: %s   Moonset: %s\n",
 					  formatTimeAndAzimuth(moonToday.rise, moonToday.riseAzimuth),
 					  formatTimeAndAzimuth(moonToday.set , moonToday.setAzimuth));
-		if(moonToday.rise==null || moonToday.set==null) {
-			writer.printf("Tomorrow's Moonrise: %s   Moonset: %s\n",
-						  formatTimeAndAzimuth(moonTomorrow.rise, moonTomorrow.riseAzimuth),
-						  formatTimeAndAzimuth(moonTomorrow.set,  moonTomorrow.setAzimuth));
-		}
+		writer.printf("Tomorrow's Moonrise: %s   Moonset: %s\n",
+					  formatTimeAndAzimuth(moonTomorrow.rise, moonTomorrow.riseAzimuth),
+					  formatTimeAndAzimuth(moonTomorrow.set,  moonTomorrow.setAzimuth));
 		
 		writer.flush();
 		return sw.getBuffer().toString();
