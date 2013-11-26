@@ -103,7 +103,7 @@ public class Result {
 					  replaceNull(astronomicalTwilight.setAmount));
 
 		
-		writer.printf("Today's Moonrise: %s   Moonset: %s\n",
+		writer.printf("Today's Moonrise   : %s   Moonset: %s\n",
 					  formatTimeAndAzimuth(moonToday.rise, moonToday.riseAzimuth),
 					  formatTimeAndAzimuth(moonToday.set , moonToday.setAzimuth));
 		writer.printf("Tomorrow's Moonrise: %s   Moonset: %s\n",
@@ -122,7 +122,7 @@ public class Result {
 		StringWriter sw = new StringWriter();
 		PrintWriter writer = new PrintWriter(sw);
 		
-		writer.printf("(%s, azimuth %(.1f)",
+		writer.printf("(%s, azimuth %5.1f)",
 				  replaceNull(t), azimuth);
 		
 		writer.flush();
