@@ -16,7 +16,7 @@ public class App {
 	public static void main(String[] args) { 
 		GpsCoordinate gps = new GpsCoordinate(LATITUDE, LONGITUDE);
 		
-		int month=11, day=19, year=2013;
+		int month=11, day=25, year=2013;
 		SimpleDate date = new SimpleDate(month, day, year);
 		
 		Calculator calculator = new Calculator();

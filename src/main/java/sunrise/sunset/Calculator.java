@@ -1,5 +1,8 @@
 package sunrise.sunset;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 
 public class Calculator {
 
@@ -20,6 +23,7 @@ public class Calculator {
 	private static final double NAUTICAL_TWILIGHT_OFFSET = -12;
 	private static final double ASTRONOMICAL_TWILIGHT_OFFSET= -17.8;
 	private static final double GOLDEN_HOUR_OFFSET= 10.0;
+	private static final double MOONRISE_MOONSET_OFFSET = 0;
 	
 	
 	/**
@@ -43,21 +47,20 @@ public class Calculator {
 		daysFromEpoc = daysFromEpoc + timeZoneShift;
 		
 		
-		Position today    = calculateSunPosition(daysFromEpoc);		
-		Position tomorrow = calculateSunPosition(daysFromEpoc+1);
+		Position sunToday    = calculateSunPosition(daysFromEpoc);		
+		Position sunTomorrow = calculateSunPosition(daysFromEpoc+1);
 		
-		
-		if (tomorrow.rightAscention < today.rightAscention) {
-			double ascention = tomorrow.rightAscention+2*Math.PI;
-			tomorrow = new Position(ascention, tomorrow.declination);
+		if (sunTomorrow.rightAscention < sunToday.rightAscention) {
+			double ascention = sunTomorrow.rightAscention+2*Math.PI;
+			sunTomorrow = new Position(ascention, sunTomorrow.declination);
 		}
 		
 
-		Result sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, today, tomorrow);
-		Result goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, today, tomorrow);
-		Result civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, today, tomorrow);
-		Result nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, today, tomorrow);
-		Result astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, today, tomorrow);
+		Result sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);
+		Result goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, sunToday, sunTomorrow);
+		Result civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		Result nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		Result astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
 		
 		Result combined = sunriseSunset;
 		combined.goldenHourBegin = goldenHour.sunRise;
@@ -68,6 +71,22 @@ public class Calculator {
 		combined.nauticalTwilightEnd   = nauticalTwilight.sunSet;
 		combined.astronomicalTwilightBegin = astronomicalTwilight.sunRise;
 		combined.astronomicalTwilightEnd   = astronomicalTwilight.sunSet;
+		
+		
+		Position moonToday    = calculateMoonPosition(daysFromEpoc);
+		Position moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
+		System.err.println("Moon  Today: "+moonToday);
+		System.err.println("Moon Tomrrw: "+moonTomorrow);
+		
+		if (moonTomorrow.rightAscention < moonToday.rightAscention) {
+			double ascention = moonTomorrow.rightAscention+2*Math.PI;
+			moonTomorrow = new Position(ascention, moonTomorrow.declination);
+		}
+		
+		Result moonriseMoonSet = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
+		combined.moonRise = moonriseMoonSet.sunRise;
+		combined.moonSet  = moonriseMoonSet.sunSet;
+		
 		
 		return combined; 
 	}
@@ -286,6 +305,16 @@ public class Calculator {
 			this.declination = declination;
 		}
 		
+		public String toString() {
+			StringWriter sw = new StringWriter();
+			PrintWriter writer = new PrintWriter(sw);
+			
+			writer.printf("Position (rightAscention %(.4f, declination %(.4f)", rightAscention, declination);
+			
+			writer.flush();
+			return sw.getBuffer().toString();
+		}
+		
 	}
 	
 	/**
@@ -303,7 +332,7 @@ public class Calculator {
 		double meanLongitudeOfSun = revolutionsToTruncatedRadians(.779072 + .00273790931*daysFromEpoc);
 		double meanAnomalyOfSun   = revolutionsToTruncatedRadians(.993126 + .00273777850*daysFromEpoc);
 		
-		double meanLongitudinalOfMoon        = revolutionsToTruncatedRadians(.606434 + .03660110129*daysFromEpoc);
+		double meanLongitudeOfMoon           = revolutionsToTruncatedRadians(.606434 + .03660110129*daysFromEpoc);
 		double longitudeOfLunarAscendingNode = revolutionsToTruncatedRadians(.347343 - .00014709391*daysFromEpoc);
 		double meanAnomalyOfVenus            = revolutionsToTruncatedRadians(.140023 + .00445036173*daysFromEpoc);
 		double meanAnomalyOfMars             = revolutionsToTruncatedRadians(.053856 + .00145561327*daysFromEpoc);
@@ -336,13 +365,221 @@ public class Calculator {
 		W = W - .00008 * Math.sin(longitudeOfLunarAscendingNode);
 		W = W + .00007 * Math.sin(2*meanAnomalyOfSun);
 		W = W + .00005 * numCenturiesSince1900 * Math.sin(2*meanLongitudeOfSun);
-		W = W + .00003 * Math.sin(meanLongitudinalOfMoon-meanLongitudeOfSun);
+		W = W + .00003 * Math.sin(meanLongitudeOfMoon-meanLongitudeOfSun);
 		W = W - .00002 * Math.cos(meanAnomalyOfSun-meanAnomalyOfJupiter);
 		W = W + .00002 * Math.sin(4*meanAnomalyOfSun-8*meanAnomalyOfMars+3*meanAnomalyOfJupiter);
 		W = W - .00002 * Math.sin(meanAnomalyOfSun-meanAnomalyOfVenus);
 		W = W - .00002 * Math.cos(2*meanAnomalyOfSun-2*meanAnomalyOfVenus);
 		
 		return calculatePosition(meanLongitudeOfSun, U, V, W);
+	}
+	
+	private Position calculateMoonPosition(double daysFromEpoc) {
+		double numCenturiesSince1900 = daysFromEpoc/NUM_DAYS_IN_CENTURY + 1;
+		
+		//   Fundamental arguments 
+		//   (Van Flandern & Pulkkinen, 1979)		
+		double meanLongitudeOfMoon     = revolutionsToTruncatedRadians(.606434 + .03660110129*daysFromEpoc); // 1
+		
+		double meanAnomalyOfMoon       = revolutionsToTruncatedRadians(.374897 + .03629164709*daysFromEpoc); // 2
+		double argumentOfLatitudeOfMoon= revolutionsToTruncatedRadians(.259091 + .03674819520*daysFromEpoc); // 3
+		double meanElongationOfMoon    = revolutionsToTruncatedRadians(.827362 + .03386319198*daysFromEpoc); // 4
+		double longitudeOfLunarAscendingNode= revolutionsToTruncatedRadians(.347343 - .00014709391*daysFromEpoc); // 5
+		double meanLongitudeOfSun      = revolutionsToTruncatedRadians(.779072 + .00273790931*daysFromEpoc); // 7
+		double meanAnomalyOfSun        = revolutionsToTruncatedRadians(.993126 + .00273777850*daysFromEpoc); // 8
+		double meanLongitudeOfVenus    = revolutionsToTruncatedRadians(0.505498 + .00445046867*daysFromEpoc); // 12
+		
+		
+		double A = meanAnomalyOfMoon ;            // 2
+		double B = argumentOfLatitudeOfMoon ;     // 3
+		double C = meanElongationOfMoon;          // 4
+		double D = longitudeOfLunarAscendingNode; // 5
+		double E = meanLongitudeOfSun;            // 7
+		double F = meanAnomalyOfSun;              // 8
+		double G = meanLongitudeOfVenus;          // 12
+		
+		
+		double V;
+		V =     .39558 * Math.sin(B+D);
+		V = V + .08200 * Math.sin(B);
+		V = V + .03257 * Math.sin(A-B-D);
+		V = V + .01092 * Math.sin(A+B+D);
+		V = V + .00666 * Math.sin(A-B);
+		V = V - .00644 * Math.sin(A+B-2*C+D);
+		V = V - .00331 * Math.sin(B-2*C+D);
+		V = V - .00304 * Math.sin(B-2*C);
+		V = V - .00240 * Math.sin(A-B-2*C-D);
+		V = V + .00226 * Math.sin(A+B);
+		V = V - .00108 * Math.sin(A+B-2*C);
+		V = V - .00079 * Math.sin(B-D);
+		V = V + .00078 * Math.sin(B+2*C+D);
+		V = V + .00066 * Math.sin(B+D-F);
+		V = V - .00062 * Math.sin(B+D+F);
+		V = V - .00050 * Math.sin(A-B-2*C);
+		V = V + .00045 * Math.sin(2*A+B+D);
+		V = V - .00031 * Math.sin(2*A+B-2*C+D);
+		V = V - .00027 * Math.sin(A+B-2*C+D+F);
+		V = V - .00024 * Math.sin(B-2*C+D+F);
+		V = V - .00021 * numCenturiesSince1900 * Math.sin(B+D);
+		V = V + .00018 * Math.sin(B-C+D);
+		V = V + .00016 * Math.sin(B+2*C);
+		V = V + .00016 * Math.sin(A-B-D-F);
+		V = V - .00016 * Math.sin(2*A-B-D);
+		V = V - .00015 * Math.sin(B-2*C+F);
+		V = V - .00012 * Math.sin(A-B-2*C-D+F);
+		V = V - .00011 * Math.sin(A-B-D+F);
+		V = V + .00009 * Math.sin(A+B+D-F);
+		V = V + .00009 * Math.sin(2*A+B);
+		V = V + .00008 * Math.sin(2*A-B);
+		V = V + .00008 * Math.sin(A+B+2*C+D);
+		V = V - .00008 * Math.sin(3*B-2*C+D);
+		V = V + .00007 * Math.sin(A-B+2*C);
+		V = V - .00007 * Math.sin(2*A-B-2*C-D);
+		V = V - .00007 * Math.sin(A+B+D+F);
+		V = V - .00006 * Math.sin(B+C+D);
+		V = V + .00006 * Math.sin(B-2*C-F);
+		V = V + .00006 * Math.sin(A-B+D);
+		V = V + .00006 * Math.sin(B+2*C+D-F);
+		V = V - .00005 * Math.sin(A+B-2*C+F);
+		V = V - .00004 * Math.sin(2*A+B-2*C);
+		V = V + .00004 * Math.sin(A-3*B-D);
+		V = V + .00004 * Math.sin(A-B-F);
+		V = V - .00003 * Math.sin(A-B+F);
+		V = V + .00003 * Math.sin(B-C);
+		V = V + .00003 * Math.sin(B-2*C+D-F);
+		V = V - .00003 * Math.sin(B-2*C-D);
+		V = V + .00003 * Math.sin(A+B-2*C+D-F);
+		V = V + .00003 * Math.sin(B-F);
+		V = V - .00003 * Math.sin(B-C+D-F);
+		V = V - .00002 * Math.sin(A-B-2*C+F);
+		V = V - .00002 * Math.sin(B+F);
+		V = V + .00002 * Math.sin(A+B-C+D);
+		V = V - .00002 * Math.sin(A+B-D);
+		V = V + .00002 * Math.sin(3*A+B+D);
+		V = V - .00002 * Math.sin(2*A-B-4*C-D);
+		V = V + .00002 * Math.sin(A-B-2*C-D-F);
+		V = V - .00002 * numCenturiesSince1900 * Math.sin(A-B-D);
+		V = V - .00002 * Math.sin(A-B-4*C-D);
+		V = V - .00002 * Math.sin(A+B-4*C);
+		V = V - .00002 * Math.sin(2*A-B-2*C);
+		V = V + .00002 * Math.sin(A+B+2*C);
+		V = V + .00002 * Math.sin(A+B-F);
+		
+		
+		double U;
+		U = 1 - .10828 * Math.cos(A);
+		U = U - .01880 * Math.cos(A-2*C);
+		U = U - .01479 * Math.cos(2*C);
+		U = U + .00181 * Math.cos(2*A-2*C);
+		U = U - .00147 * Math.cos(2*A);
+		U = U - .00105 * Math.cos(2*C-F);
+		U = U - .00075 * Math.cos(A-2*C+F);
+		U = U - .00067 * Math.cos(A-F);
+		U = U + .00057 * Math.cos(C);
+		U = U + .00055 * Math.cos(A+F);
+		U = U - .00046 * Math.cos(A+2*C);
+		U = U + .00041 * Math.cos(A-2*B);
+		U = U + .00024 * Math.cos(F);
+		U = U + .00017 * Math.cos(2*C+F);
+		U = U - .00013 * Math.cos(A-2*C-F);
+		U = U - .00010 * Math.cos(A-4*C);
+		U = U - .00009 * Math.cos(C+F);
+		U = U + .00007 * Math.cos(2*A-2*C+F);
+		U = U + .00006 * Math.cos(3*A-2*C);
+		U = U + .00006 * Math.cos(2*B-2*C);
+		U = U - .00005 * Math.cos(2*C-2*F);
+		U = U - .00005 * Math.cos(2*A-4*C);
+		U = U + .00005 * Math.cos(A+2*B-2*C);
+		U = U - .00005 * Math.cos(A-C);
+		U = U - .00004 * Math.cos(A+2*C-F);
+		U = U - .00004 * Math.cos(3*A);
+		U = U - .00003 * Math.cos(A-4*C+F);
+		U = U - .00003 * Math.cos(2*A-2*B);
+		U = U - .00003 * Math.cos(2*B);
+
+		
+		double W;
+		W =     .10478 * Math.sin(A);
+		W = W - .04105 * Math.sin(2*B+2*D);
+		W = W - .02130 * Math.sin(A-2*C);
+		W = W - .01779 * Math.sin(2*B+D);
+		W = W + .01774 * Math.sin(D);
+		W = W + .00987 * Math.sin(2*C);
+		W = W - .00338 * Math.sin(A-2*B-2*D);
+		W = W - .00309 * Math.sin(F);
+		W = W - .00190 * Math.sin(2*B);
+		W = W - .00144 * Math.sin(A+D);
+		W = W - .00144 * Math.sin(A-2*B-D);
+		W = W - .00113 * Math.sin(A+2*B+2*D);
+		W = W - .00094 * Math.sin(A-2*C+F);
+		W = W - .00092 * Math.sin(2*A-2*C);
+		W = W + .00071 * Math.sin(2*C-F);
+		W = W + .00070 * Math.sin(2*A);
+		W = W + .00067 * Math.sin(A+2*B-2*C+2*D);
+		W = W + .00066 * Math.sin(2*B-2*C+D);
+		W = W - .00066 * Math.sin(2*C+D);
+		W = W + .00061 * Math.sin(A-F);
+		W = W - .00058 * Math.sin(C);
+		W = W - .00049 * Math.sin(A+2*B+D);
+		W = W - .00049 * Math.sin(A-D);
+		W = W - .00042 * Math.sin(A+F);
+		W = W + .00034 * Math.sin(2*B-2*C+2*D);
+		W = W - .00026 * Math.sin(2*B-2*C);
+		W = W + .00025 * Math.sin(A-2*B-2*C-2*D);
+		W = W + .00024 * Math.sin(A-2*B);
+		W = W + .00023 * Math.sin(A+2*B-2*C+D);
+		W = W + .00023 * Math.sin(A-2*C-D);
+		W = W + .00019 * Math.sin(A+2*C);
+		W = W + .00012 * Math.sin(A-2*C-F);
+		W = W + .00011 * Math.sin(A-2*C+D);
+		W = W + .00011 * Math.sin(A-2*B-2*C-D);
+		W = W - .00010 * Math.sin(2*C+F);
+		W = W + .00009 * Math.sin(A-C);
+		W = W + .00008 * Math.sin(C+F);
+		W = W - .00008 * Math.sin(2*B+2*C+2*D);
+		W = W - .00008 * Math.sin(2*D);
+		W = W - .00007 * Math.sin(2*B+2*D-F);
+		W = W + .00006 * Math.sin(2*B+2*D+F);
+		W = W - .00005 * Math.sin(A+2*B);
+		W = W + .00005 * Math.sin(3*A);
+		W = W - .00005 * Math.sin(A+16*E-18*G);
+		W = W - .00005 * Math.sin(2*A+2*B+2*D);
+		W = W + .00004 * numCenturiesSince1900 * Math.sin(2*B+2*D);
+		W = W + .00004 * Math.cos(A+16*E-18*G);
+		W = W - .00004 * Math.sin(A-2*B+2*C);
+		W = W - .00004 * Math.sin(A-4*C);
+		W = W - .00004 * Math.sin(3*A-2*C);
+		W = W - .00004 * Math.sin(2*B+2*C+D);
+		W = W - .00004 * Math.sin(2*C-D);
+		W = W - .00003 * Math.sin(2*F);
+		W = W - .00003 * Math.sin(A-2*C+2*F);
+		W = W + .00003 * Math.sin(2*B-2*C+D+F);
+		W = W - .00003 * Math.sin(2*C+D-F);
+		W = W + .00003 * Math.sin(2*A+2*B-2*C+2*D);
+		W = W + .00003 * Math.sin(2*C-2*F);
+		W = W - .00003 * Math.sin(2*A-2*C+F);
+		W = W + .00003 * Math.sin(A+2*B-2*C+2*D+F);
+		W = W - .00003 * Math.sin(2*A-4*C);
+		W = W + .00002 * Math.sin(2*B-2*C+2*D+F);
+		W = W - .00002 * Math.sin(2*A+2*B+D);
+		W = W - .00002 * Math.sin(2*A-D);
+		W = W + .00002 * numCenturiesSince1900 * Math.cos(A+16*E-18*G);
+		W = W + .00002 * Math.sin(4*C);
+		W = W - .00002 * Math.sin(2*B-C+2*D);
+		W = W - .00002 * Math.sin(A+2*B-2*C);
+		W = W - .00002 * Math.sin(2*A+D);
+		W = W - .00002 * Math.sin(2*A-2*B-D);
+		W = W + .00002 * Math.sin(A+2*C-F);
+		W = W + .00002 * Math.sin(2*A-F);
+		W = W - .00002 * Math.sin(A-4*C+F);
+		W = W + .00002 * numCenturiesSince1900 * Math.sin(A+16*E-18*G);
+		W = W - .00002 * Math.sin(A-2*B-2*D-F);
+		W = W + .00002 * Math.sin(2*A-2*B-2*D);
+		W = W - .00002 * Math.sin(A+2*C+D);
+		W = W - .00002 * Math.sin(A-2*B+2*C-D);
+		
+		
+		return calculatePosition(meanLongitudeOfMoon, U, V, W);
 	}
 
 	/**
@@ -355,7 +592,7 @@ public class Calculator {
 		
 		double declination = Math.asin(V / Math.sqrt(U));
 		
-		//System.err.println("calculateSunPosition: ("+rightAscention+","+declination+")");
+		//System.err.println("calculatePosition: ("+rightAscention+","+declination+")");
 		return new Position(rightAscention, declination);
 	}
 	
