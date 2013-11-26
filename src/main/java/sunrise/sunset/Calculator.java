@@ -1,8 +1,5 @@
 package sunrise.sunset;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 
 public class Calculator {
 
@@ -18,12 +15,22 @@ public class Calculator {
 	// respectively as 6, 12, and 18 degrees below the horizon. I'm choosing a slightly 
 	// different astronomical offset to better match published times over a wide range 
 	// of dates. Negative values mean below the horizon. Positive are above the horizon.
-	private static final double SUNRISE_SUNET_OFFSET = 0;
-	private static final double CIVIL_TWILIGHT_OFFSET = -6;
-	private static final double NAUTICAL_TWILIGHT_OFFSET = -12;
-	private static final double ASTRONOMICAL_TWILIGHT_OFFSET= -17.8;
-	private static final double GOLDEN_HOUR_OFFSET= 10.0;
-	private static final double MOONRISE_MOONSET_OFFSET = 0;
+	private static final Offset SUNRISE_SUNET_OFFSET        = new Offset(0    , true);
+	private static final Offset CIVIL_TWILIGHT_OFFSET       = new Offset(-6   , false);
+	private static final Offset NAUTICAL_TWILIGHT_OFFSET    = new Offset(-12  , false);
+	private static final Offset ASTRONOMICAL_TWILIGHT_OFFSET= new Offset(-17.8, false);
+	private static final Offset GOLDEN_HOUR_OFFSET          = new Offset(10.0 , false);
+	private static final Offset MOONRISE_MOONSET_OFFSET     = new Offset(0    , false);
+	
+	private static class Offset {
+		final double fromHorizon; //in degrees
+		final boolean accountForAtmosphericRefraction;
+		
+		public Offset(double fromHorizon, boolean accountForAtmosphericRefraction) {
+			this.fromHorizon = fromHorizon;
+			this.accountForAtmosphericRefraction = accountForAtmosphericRefraction;
+		}
+	}
 	
 	
 	/**
@@ -43,10 +50,13 @@ public class Calculator {
 		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC) + 0.5;
 
 		
-		double LST = calculateLST(daysFromEpoc, timeZoneShift, gps.longitude);
+		double LST     = calculateLST(daysFromEpoc  , timeZoneShift, gps.longitude);
+		double nextLST = calculateLST(daysFromEpoc+1, timeZoneShift, gps.longitude);
+		
 		daysFromEpoc = daysFromEpoc + timeZoneShift;
 		
 		
+		//calculate Sun related times
 		Position sunToday    = calculateSunPosition(daysFromEpoc);		
 		Position sunTomorrow = calculateSunPosition(daysFromEpoc+1);
 		
@@ -55,7 +65,6 @@ public class Calculator {
 			sunTomorrow = new Position(ascention, sunTomorrow.declination);
 		}
 		
-
 		Result sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);
 		Result goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, sunToday, sunTomorrow);
 		Result civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
@@ -73,26 +82,40 @@ public class Calculator {
 		combined.astronomicalTwilightEnd   = astronomicalTwilight.sunSet;
 		
 		
+		//calculate today moon
 		Position moonToday    = calculateMoonPosition(daysFromEpoc);
 		Position moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
-		System.err.println("Moon  Today: "+moonToday);
-		System.err.println("Moon Tomrrw: "+moonTomorrow);
+
 		
 		if (moonTomorrow.rightAscention < moonToday.rightAscention) {
 			double ascention = moonTomorrow.rightAscention+2*Math.PI;
 			moonTomorrow = new Position(ascention, moonTomorrow.declination);
 		}
 		
-		Result moonriseMoonSet = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
-		combined.moonRise = moonriseMoonSet.sunRise;
-		combined.moonSet  = moonriseMoonSet.sunSet;
+		Result todayMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
+		combined.moonRiseToday = todayMoon.sunRise;
+		combined.moonSetToday  = todayMoon.sunSet;
 		
+		
+		//calculate tomorrow moon
+		moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
+		Position moonDayAfter = calculateMoonPosition(daysFromEpoc+2);
+
+		
+		if (moonDayAfter.rightAscention < moonTomorrow.rightAscention) {
+			double ascention = moonDayAfter.rightAscention+2*Math.PI;
+			moonDayAfter = new Position(ascention, moonDayAfter.declination);
+		}
+		
+		Result tomorrowMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
+		combined.moonRiseTomorrow = tomorrowMoon.sunRise;
+		combined.moonSetTomorrow  = tomorrowMoon.sunSet;
 		
 		return combined; 
 	}
 
 	private Result calculate(
-			double horizonOffset, //in degrees
+			Offset offset, 
 			GpsCoordinate gps, 
 			double LST, 
 			Position today,
@@ -116,7 +139,8 @@ public class Calculator {
 			double asention    = today.rightAscention + fractionOfDay*changeInAscention;
 			double declination = today.declination    + fractionOfDay*changeInDeclination;
 					
-			testResult =  testHourForEvent(hourOfDay, horizonOffset,
+			testResult =  testHourForEvent(hourOfDay,
+										   offset,
 										   previousAscention,   asention, 
 										   previousDeclination, declination,
 										   previousV, gps, LST);
@@ -125,13 +149,13 @@ public class Calculator {
 			previousDeclination = declination;
 			previousV           = testResult.V;
 			
-			if(testResult.sunRise != null) {
-				result.sunRise    = testResult.sunRise;
+			if(testResult.rise != null) {
+				result.sunRise    = testResult.rise;
 				result.riseAzmith = testResult.riseAzmith;
 			}
 			
-			if(testResult.sunSet != null) {
-				result.sunSet    = testResult.sunSet;
+			if(testResult.set != null) {
+				result.sunSet    = testResult.set;
 				result.setAzmith = testResult.setAzmith;
 			}
 			
@@ -139,11 +163,11 @@ public class Calculator {
 		
 		
 		result.typeOfDay = findTypeOfDay(result, testResult.V);
-		setSolarNoon(result);
+		calculateSolarNoon(result);
 		return result;
 	}
 	
-	private void setSolarNoon(Result result) {
+	private void calculateSolarNoon(Result result) {
 		switch(result.typeOfDay) {
 		case NORMAL_DAY:
 			Time lengthOfDay = result.getLengthOfDay();
@@ -187,7 +211,7 @@ public class Calculator {
 	
 	
 	private static class TestResult {
-		Time sunRise, sunSet;
+		Time rise, set;
 		double riseAzmith, setAzmith;
 		double V;
 	}
@@ -197,7 +221,7 @@ public class Calculator {
 	 * Test an hour for an event
 	 */	
 	private TestResult testHourForEvent(
-			int hourOfDay, double degreeOffset,
+			int hourOfDay, Offset offset,
 			double previousAscention, double ascention,
 			double previousDeclination, double declination, 
 			double previousV, 
@@ -208,11 +232,11 @@ public class Calculator {
 		
 		//90.833 is for atmospheric refraction when sun is at the horizon.
 		//ie the sun slips below the horizon at sunset before you actually see it go below the horizon
-		double zenithDistance = DR * (degreeOffset == 0 ? 90.833 : 90.0); 
+		double zenithDistance = DR * (offset.accountForAtmosphericRefraction ? 90.833 : 90.0); 
 		
 		double S = Math.sin(gps.latitude*DR);
 		double C = Math.cos(gps.latitude*DR);
-		double Z = Math.cos(zenithDistance) + degreeOffset*DR;
+		double Z = Math.cos(zenithDistance) + offset.fromHorizon*DR;
 		
 		double L0 = LST + hourOfDay*K1;
 		double L2 = L0 + K1;
@@ -268,12 +292,12 @@ public class Calculator {
 				
 				
 				if (previousV<0 && V>0) {
-					ret.sunRise = new Time(hour, min);
+					ret.rise = new Time(hour, min);
 					ret.riseAzmith = azmith;
 				}
 
 				if (previousV>0 && V<0) {
-					ret.sunSet = new Time(hour, min);
+					ret.set = new Time(hour, min);
 					ret.setAzmith = azmith;
 				}				
 							
@@ -295,27 +319,6 @@ public class Calculator {
 		return val == 0 ? 0 : (val > 0 ? 1 : 0);
 	}
 	
-	private static class Position {
-		final double rightAscention,
-		             declination;
-		
-		
-		public Position(double rightAscention, double declination) {
-			this.rightAscention = rightAscention;
-			this.declination = declination;
-		}
-		
-		public String toString() {
-			StringWriter sw = new StringWriter();
-			PrintWriter writer = new PrintWriter(sw);
-			
-			writer.printf("Position (rightAscention %(.4f, declination %(.4f)", rightAscention, declination);
-			
-			writer.flush();
-			return sw.getBuffer().toString();
-		}
-		
-	}
 	
 	/**
 	 * drops any full revolutions and then converts revolutions to radians 

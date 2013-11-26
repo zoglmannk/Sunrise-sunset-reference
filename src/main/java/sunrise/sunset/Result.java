@@ -16,7 +16,8 @@ public class Result {
 	
 	public Time goldenHourBegin, goldenHourEnd;
 	
-	public Time moonRise, moonSet;
+	public Time moonRiseToday, moonSetToday;
+	public Time moonRiseTomorrow, moonSetTomorrow;
 	
 	
 	public enum TypeOfDay {
@@ -116,7 +117,8 @@ public class Result {
 					  (astronomicalTwilightBegin == null ? "null" : astronomicalTwilightBegin),
 					  (astronomicalTwilightEnd == null ? "null" : astronomicalTwilightEnd));
 
-		writer.printf("Moonrise: %s   Moonset: %s\n",moonRise, moonSet);
+		writer.printf("Today   : Moonrise: %s   Moonset: %s\n",moonRiseToday, moonSetToday);
+		writer.printf("Tomarrow: Moonrise: %s   Moonset: %s\n",moonRiseTomorrow, moonSetTomorrow);
 		
 		writer.flush();
 		return sw.getBuffer().toString();
