@@ -129,12 +129,12 @@ public class Calculator {
 			
 			if(intermediateTestResult.rise != null) {
 				testResult.rise       = intermediateTestResult.rise;
-				testResult.riseAzmith = intermediateTestResult.riseAzmith;
+				testResult.riseAzimuth = intermediateTestResult.riseAzimuth;
 			}
 			
 			if(intermediateTestResult.set != null) {
 				testResult.set       = intermediateTestResult.set;
-				testResult.setAzmith = intermediateTestResult.setAzmith;
+				testResult.setAzimuth = intermediateTestResult.setAzimuth;
 			}
 			
 			previousAscention   = asention;
@@ -152,8 +152,8 @@ public class Calculator {
 		
 		ret.rise = testResult.rise;
 		ret.set  = testResult.set;
-		ret.riseAzimuth = testResult.riseAzmith;
-		ret.setAzimuth  = testResult.setAzmith;
+		ret.riseAzimuth = testResult.riseAzimuth;
+		ret.setAzimuth  = testResult.setAzimuth;
 		ret.type = findTypeOfDay(testResult, testResult.V);
 		setRisenAndSetAmounts(ret);
 		setMeridianCrossing(ret);
@@ -199,7 +199,7 @@ public class Calculator {
 
 		double V = S*Math.sin(declination) + C*Math.cos(declination)*Math.cos(H2) - Z;
 		
-		if(sunCrossedHorizon(previousV, V)) {
+		if(objectCrossedHorizon(previousV, V)) {
 			double V1 = S*Math.sin(D1) + C*Math.cos(D1)*Math.cos(H1) - Z;
 			
 			double A = 2*V - 4*V1 + 2*previousV;
@@ -217,18 +217,18 @@ public class Calculator {
 				double H7 = H0 + E*(H2-H0);
 				double N7 = -1 * Math.cos(D1)*Math.sin(H7);
 				double D7 = C*Math.sin(D1) - S*Math.cos(D1)*Math.cos(H7);
-				double azmith = Math.atan(N7/D7)/DR;
+				double azimuth = Math.atan(N7/D7)/DR;
 				
 				if(D7 < 0) {
-					azmith = azmith+180;
+					azimuth = azimuth+180;
 				}
 
-				if(azmith < 0) {
-					azmith = azmith+360;
+				if(azimuth < 0) {
+					azimuth = azimuth+360;
 				}
 
-				if(azmith > 360) {
-					azmith = azmith-360;
+				if(azimuth > 360) {
+					azimuth = azimuth-360;
 				}
 				
 
@@ -239,12 +239,12 @@ public class Calculator {
 				
 				if (previousV<0 && V>0) {
 					ret.rise = new Time(hour, min);
-					ret.riseAzmith = azmith;
+					ret.riseAzimuth = azimuth;
 				}
 
 				if (previousV>0 && V<0) {
 					ret.set = new Time(hour, min);
-					ret.setAzmith = azmith;
+					ret.setAzimuth = azimuth;
 				}				
 							
 			}
@@ -259,12 +259,12 @@ public class Calculator {
 	
 	private static class TestResult {
 		Time rise, set;
-		double riseAzmith, setAzmith;
+		double riseAzimuth, setAzimuth;
 		double V;
 	}
 
 
-	private boolean sunCrossedHorizon(double previousV, double V) {
+	private boolean objectCrossedHorizon(double previousV, double V) {
 		return sgn(previousV) != sgn(V);
 	}
 	
