@@ -107,7 +107,7 @@ public class Result {
 					  replaceNull(moonToday.rise), moonToday.riseAzmith, 
 					  replaceNull(moonToday.set),  moonToday.setAzmith);
 		if(moonToday.rise==null || moonToday.set==null) {
-			writer.printf("Tomarrow's Moonrise: (%s, azmimuth %(.1f)   Moonset: (%s, azmimuth %(.1f)\n",
+			writer.printf("Tomorrow's Moonrise: (%s, azmimuth %(.1f)   Moonset: (%s, azmimuth %(.1f)\n",
 						  replaceNull(moonTomorrow.rise), moonTomorrow.riseAzmith, 
 						  replaceNull(moonTomorrow.set), moonTomorrow.setAzmith);
 		}
