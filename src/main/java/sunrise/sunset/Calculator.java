@@ -152,8 +152,8 @@ public class Calculator {
 		
 		ret.rise = testResult.rise;
 		ret.set  = testResult.set;
-		ret.riseAzmith = testResult.riseAzmith;
-		ret.setAzmith  = testResult.setAzmith;
+		ret.riseAzimuth = testResult.riseAzmith;
+		ret.setAzimuth  = testResult.setAzmith;
 		ret.type = findTypeOfDay(testResult, testResult.V);
 		setRisenAndSetAmounts(ret);
 		setMeridianCrossing(ret);

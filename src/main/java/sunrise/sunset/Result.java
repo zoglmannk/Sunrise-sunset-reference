@@ -15,7 +15,7 @@ public class Result {
 
 	public static class Event {
 		public Time rise, set;
-		public double riseAzmith, setAzmith;
+		public double riseAzimuth, setAzimuth;
 		public HorizonToHorizonCrossing type;
 		
 		public Time meridianCrossing, antimeridianCrossing;
@@ -36,14 +36,14 @@ public class Result {
 		PrintWriter writer = new PrintWriter(sw);
 		
 		if(sun.rise != null) {
-			writer.printf("Sunrise (%s, azmimuth %(.1f)", sun.rise, sun.riseAzmith);
+			writer.printf("Sunrise %s", formatTimeAndAzimuth(sun.rise, sun.riseAzimuth));
 		}
 		
 		if(sun.set != null) {
 			if(sun.rise != null) {
 				writer.print(", ");
 			}
-			writer.printf("Sunset (%s, azmimuth %(.1f)\n", sun.set, sun.setAzmith);
+			writer.printf("Sunset %s\n", formatTimeAndAzimuth(sun.set, sun.setAzimuth));
 		}
 		
 		
@@ -103,17 +103,33 @@ public class Result {
 					  replaceNull(astronomicalTwilight.setAmount));
 
 		
-		writer.printf("Today's Moonrise: (%s, azmimuth %(.1f)   Moonset: (%s, azmimuth %(.1f)\n",
-					  replaceNull(moonToday.rise), moonToday.riseAzmith, 
-					  replaceNull(moonToday.set),  moonToday.setAzmith);
+		writer.printf("Today's Moonrise: %s   Moonset: %s\n",
+					  formatTimeAndAzimuth(moonToday.rise, moonToday.riseAzimuth),
+					  formatTimeAndAzimuth(moonToday.set , moonToday.setAzimuth));
 		if(moonToday.rise==null || moonToday.set==null) {
-			writer.printf("Tomorrow's Moonrise: (%s, azmimuth %(.1f)   Moonset: (%s, azmimuth %(.1f)\n",
-						  replaceNull(moonTomorrow.rise), moonTomorrow.riseAzmith, 
-						  replaceNull(moonTomorrow.set), moonTomorrow.setAzmith);
+			writer.printf("Tomorrow's Moonrise: %s   Moonset: %s\n",
+						  formatTimeAndAzimuth(moonTomorrow.rise, moonTomorrow.riseAzimuth),
+						  formatTimeAndAzimuth(moonTomorrow.set,  moonTomorrow.setAzimuth));
 		}
 		
 		writer.flush();
 		return sw.getBuffer().toString();
+	}
+	
+	private String formatTimeAndAzimuth(Time t, double azimuth) {
+		if(t == null) {
+			return "--None--";
+		}
+		
+		StringWriter sw = new StringWriter();
+		PrintWriter writer = new PrintWriter(sw);
+		
+		writer.printf("(%s, azimuth %(.1f)",
+				  replaceNull(t), azimuth);
+		
+		writer.flush();
+		return sw.getBuffer().toString();
+		
 	}
 	
 	private String replaceNull(Time s) {
