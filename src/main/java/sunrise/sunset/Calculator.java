@@ -1,5 +1,7 @@
 package sunrise.sunset;
 
+import sunrise.sunset.Result.Event;
+
 
 public class Calculator {
 
@@ -54,58 +56,34 @@ public class Calculator {
 		double nextLST = calculateLST(daysFromEpoc+1, timeZoneShift, gps.longitude);
 		
 		daysFromEpoc = daysFromEpoc + timeZoneShift;
+		Result ret = new Result();
 		
 		
 		//calculate Sun related times
 		Position sunToday    = calculateSunPosition(daysFromEpoc);		
 		Position sunTomorrow = calculateSunPosition(daysFromEpoc+1);
-		
 		sunTomorrow = ensureSecondAscentionGreater(sunToday, sunTomorrow);
-		TestResult sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);
-		
-		Result combined = new Result();
-		combined.sunRise = sunriseSunset.rise;
-		combined.sunSet  = sunriseSunset.set;
-		combined.riseAzmith = sunriseSunset.riseAzmith;
-		combined.setAzmith  = sunriseSunset.setAzmith;
-		combined.typeOfDay = findTypeOfDay(combined, sunriseSunset.V);
-		calculateSolarNoon(combined);
-		
-		TestResult goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, sunToday, sunTomorrow);
-		TestResult civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
-		TestResult nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
-		TestResult astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
-		
-		combined.goldenHourBegin = goldenHour.rise;
-		combined.goldenHourEnd   = goldenHour.set;
-		combined.civilTwilightBegin = civilTwilight.rise;
-		combined.civilTwilightEnd  = civilTwilight.set;
-		combined.nauticalTwilightBegin = nauticalTwilight.rise;
-		combined.nauticalTwilightEnd   = nauticalTwilight.set;
-		combined.astronomicalTwilightBegin = astronomicalTwilight.rise;
-		combined.astronomicalTwilightEnd   = astronomicalTwilight.set;
+		ret.sun                  = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);		
+		ret.goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, sunToday, sunTomorrow);
+		ret.civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		ret.nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		ret.astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
 		
 		
 		//calculate today moon
 		Position moonToday    = calculateMoonPosition(daysFromEpoc);
 		Position moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
-		moonTomorrow = ensureSecondAscentionGreater(moonToday, moonTomorrow);
-		
-		TestResult todayMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
-		combined.moonRiseToday = todayMoon.rise;
-		combined.moonSetToday  = todayMoon.set;
+		moonTomorrow = ensureSecondAscentionGreater(moonToday, moonTomorrow);		
+		ret.moonToday = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
 		
 		
 		//calculate tomorrow moon
 		moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
 		Position moonDayAfter = calculateMoonPosition(daysFromEpoc+2);
 		moonDayAfter = ensureSecondAscentionGreater(moonTomorrow, moonDayAfter);
+		ret.moonTomorrow = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
 		
-		TestResult tomorrowMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
-		combined.moonRiseTomorrow = tomorrowMoon.rise;
-		combined.moonSetTomorrow  = tomorrowMoon.set;
-		
-		return combined; 
+		return ret; 
 	}
 
 	private Position ensureSecondAscentionGreater(Position first, Position second) {
@@ -116,8 +94,9 @@ public class Calculator {
 		
 		return second;
 	}
+	
 
-	private TestResult calculate(
+	private Event calculate(
 			Offset offset, 
 			GpsCoordinate gps, 
 			double LST, 
@@ -132,7 +111,7 @@ public class Calculator {
 		
 		double previousV = 0; //arbitrary initial value
 		
-		TestResult ret = new TestResult();
+		TestResult testResult = new TestResult();
 		
 		
 		for(int hourOfDay=0; hourOfDay<HOURS_IN_DAY; hourOfDay++) {
@@ -141,29 +120,44 @@ public class Calculator {
 			double asention    = today.rightAscention + fractionOfDay*changeInAscention;
 			double declination = today.declination    + fractionOfDay*changeInDeclination;
 					
-			TestResult testResult =  testHourForEvent(
+			TestResult intermediateTestResult =  testHourForEvent(
 										   hourOfDay,
 										   offset,
 										   previousAscention,   asention, 
 										   previousDeclination, declination,
 										   previousV, gps, LST);
 			
-			if(testResult.rise != null) {
-				ret.rise       = testResult.rise;
-				ret.riseAzmith = testResult.riseAzmith;
+			if(intermediateTestResult.rise != null) {
+				testResult.rise       = intermediateTestResult.rise;
+				testResult.riseAzmith = intermediateTestResult.riseAzmith;
 			}
 			
-			if(testResult.set != null) {
-				ret.set       = testResult.set;
-				ret.setAzmith = testResult.setAzmith;
+			if(intermediateTestResult.set != null) {
+				testResult.set       = intermediateTestResult.set;
+				testResult.setAzmith = intermediateTestResult.setAzmith;
 			}
 			
 			previousAscention   = asention;
 			previousDeclination = declination;
-			previousV           = testResult.V;
+			previousV           = intermediateTestResult.V;
 			
 		}
 		
+		
+		return createEvent(testResult);
+	}
+	
+	private Event createEvent(TestResult testResult) {
+		Event ret = new Event();
+		
+		ret.rise = testResult.rise;
+		ret.set  = testResult.set;
+		ret.riseAzmith = testResult.riseAzmith;
+		ret.setAzmith  = testResult.setAzmith;
+		ret.type = findTypeOfDay(testResult, testResult.V);
+		setRisenAndSetAmounts(ret);
+		setMeridianCrossing(ret);
+		setAntimeridianCrossing(ret);
 		
 		return ret;
 	}
@@ -609,44 +603,112 @@ public class Calculator {
 		return julianDate;
 	}
 	
-	private void calculateSolarNoon(Result result) {
-		switch(result.typeOfDay) {
-		case NORMAL_DAY:
-			Time lengthOfDay = result.getLengthOfDay();
+	
+	private void setRisenAndSetAmounts(Event event) {		
+		Time midnight = new Time(24,00);
+		
+		switch(event.type) {
+		case NO_CHANGE_PREVIOUSLY_RISEN:
+			event.risenAmount = new Time(24,0);
+			event.setAmount   = new Time(0,0);
+			break;
+		case NO_CHANGE_PREVIOUSLY_SET:
+			event.risenAmount = new Time(0,0);
+			event.setAmount   = new Time(24,0);
+			break;
+		case ONLY_SET:
+			event.risenAmount = event.set;
+			event.setAmount = difference(midnight, event.set);
+			break;
+		case ONLY_RISEN:
+			event.risenAmount = difference(midnight, event.rise);
+			event.setAmount   = event.rise;
+			break;
+		default:
+			event.risenAmount = difference(event.set, event.rise);
+			event.setAmount   = difference(event.rise, event.set);
+		}
+		
+	}
+	
+	private Time difference(Time t1, Time t2) {		
+		int hour = t1.hour - t2.hour;
+		int min = t1.min - t2.min;
+		
+		if(min < 0) {
+			hour--;
+			min+=60;
+		}
+		
+		if(hour < 0) {
+			hour += 24;
+		}
+		
+		return new Time(hour,min);
+	}
+	
+	private void setMeridianCrossing(Event event) {
+		switch(event.type) {
+		case RISEN_AND_SET:
+			Time lengthOfDay = event.risenAmount;
 			int totalMins = (lengthOfDay.hour*60 + lengthOfDay.min)/2;
 			
-			int hour = result.sunRise.hour + (totalMins/60);
-			int min  = result.sunRise.min  + (totalMins%60);
+			int hour = event.rise.hour + (totalMins/60);
+			int min  = event.rise.min  + (totalMins%60);
 			
 			if(min > 60) {
 				hour++;
 				min = min - 60;
 			}
-			result.solarNoon = new Time(hour, min);
+			event.meridianCrossing = new Time(hour, min);
 			break;
 		default:
-			result.solarNoon = null;
+			event.meridianCrossing = null;
+		}
+	}
+	
+	private void setAntimeridianCrossing(Event event) {
+		switch(event.type) {
+		case RISEN_AND_SET:
+			Time lengthOfNight = event.setAmount;
+			int totalMins = (lengthOfNight.hour*60 + lengthOfNight.min)/2;
+			
+			int hour = event.set.hour + (totalMins/60);
+			int min  = event.set.min  + (totalMins%60);
+			
+			if(min > 60) {
+				hour++;
+				min = min - 60;
+			}
+			
+			if(hour > 24) {
+				hour -= 24;
+			}
+			event.antimeridianCrossing = new Time(hour, min);
+			break;
+		default:
+			event.antimeridianCrossing = null;
 		}
 	}
 	
 	
-	private Result.TypeOfDay findTypeOfDay(Result result, double lastV) {
+	private Result.HorizonToHorizonCrossing findTypeOfDay(TestResult result, double lastV) {
 
-		if(result.sunRise==null && result.sunSet==null) {
+		if(result.rise==null && result.set==null) {
 			if (lastV < 0) {
-				return Result.TypeOfDay.SUN_DOWN_ALL_DAY;
+				return Result.HorizonToHorizonCrossing.NO_CHANGE_PREVIOUSLY_SET;
 			} else {
-				return Result.TypeOfDay.SUN_UP_ALL_DAY;
+				return Result.HorizonToHorizonCrossing.NO_CHANGE_PREVIOUSLY_RISEN;
 			}
 			
-		} else if(result.sunRise==null) {
-			return Result.TypeOfDay.NO_SUNRISE;
+		} else if(result.rise==null) {
+			return Result.HorizonToHorizonCrossing.ONLY_SET;
 			
-		} else if(result.sunSet==null) {
-			return Result.TypeOfDay.NO_SUNSET;
+		} else if(result.set==null) {
+			return Result.HorizonToHorizonCrossing.ONLY_RISEN;
 			
 		} else {
-			return Result.TypeOfDay.NORMAL_DAY;
+			return Result.HorizonToHorizonCrossing.RISEN_AND_SET;
 		}
 
 	}
