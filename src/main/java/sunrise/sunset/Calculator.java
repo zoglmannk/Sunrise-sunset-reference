@@ -65,21 +65,29 @@ public class Calculator {
 			sunTomorrow = new Position(ascention, sunTomorrow.declination);
 		}
 		
-		Result sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);
-		Result goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, sunToday, sunTomorrow);
-		Result civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
-		Result nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
-		Result astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		TestResult sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);
 		
-		Result combined = sunriseSunset;
-		combined.goldenHourBegin = goldenHour.sunRise;
-		combined.goldenHourEnd   = goldenHour.sunSet;
-		combined.civilTwilightBegin = civilTwilight.sunRise;
-		combined.civilTwilightEnd  = civilTwilight.sunSet;
-		combined.nauticalTwilightBegin = nauticalTwilight.sunRise;
-		combined.nauticalTwilightEnd   = nauticalTwilight.sunSet;
-		combined.astronomicalTwilightBegin = astronomicalTwilight.sunRise;
-		combined.astronomicalTwilightEnd   = astronomicalTwilight.sunSet;
+		Result combined = new Result();
+		combined.sunRise = sunriseSunset.rise;
+		combined.sunSet  = sunriseSunset.set;
+		combined.riseAzmith = sunriseSunset.riseAzmith;
+		combined.setAzmith  = sunriseSunset.setAzmith;
+		combined.typeOfDay = findTypeOfDay(combined, sunriseSunset.V);
+		calculateSolarNoon(combined);
+		
+		TestResult goldenHour           = calculate(GOLDEN_HOUR_OFFSET, gps, LST, sunToday, sunTomorrow);
+		TestResult civilTwilight        = calculate(CIVIL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		TestResult nauticalTwilight     = calculate(NAUTICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		TestResult astronomicalTwilight = calculate(ASTRONOMICAL_TWILIGHT_OFFSET, gps, LST, sunToday, sunTomorrow);
+		
+		combined.goldenHourBegin = goldenHour.rise;
+		combined.goldenHourEnd   = goldenHour.set;
+		combined.civilTwilightBegin = civilTwilight.rise;
+		combined.civilTwilightEnd  = civilTwilight.set;
+		combined.nauticalTwilightBegin = nauticalTwilight.rise;
+		combined.nauticalTwilightEnd   = nauticalTwilight.set;
+		combined.astronomicalTwilightBegin = astronomicalTwilight.rise;
+		combined.astronomicalTwilightEnd   = astronomicalTwilight.set;
 		
 		
 		//calculate today moon
@@ -92,9 +100,9 @@ public class Calculator {
 			moonTomorrow = new Position(ascention, moonTomorrow.declination);
 		}
 		
-		Result todayMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
-		combined.moonRiseToday = todayMoon.sunRise;
-		combined.moonSetToday  = todayMoon.sunSet;
+		TestResult todayMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
+		combined.moonRiseToday = todayMoon.rise;
+		combined.moonSetToday  = todayMoon.set;
 		
 		
 		//calculate tomorrow moon
@@ -107,14 +115,14 @@ public class Calculator {
 			moonDayAfter = new Position(ascention, moonDayAfter.declination);
 		}
 		
-		Result tomorrowMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
-		combined.moonRiseTomorrow = tomorrowMoon.sunRise;
-		combined.moonSetTomorrow  = tomorrowMoon.sunSet;
+		TestResult tomorrowMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
+		combined.moonRiseTomorrow = tomorrowMoon.rise;
+		combined.moonSetTomorrow  = tomorrowMoon.set;
 		
 		return combined; 
 	}
 
-	private Result calculate(
+	private TestResult calculate(
 			Offset offset, 
 			GpsCoordinate gps, 
 			double LST, 
@@ -129,8 +137,7 @@ public class Calculator {
 		
 		double previousV = 0; //arbitrary initial value
 		
-		Result result = new Result();
-		TestResult testResult = null;
+		TestResult ret = new TestResult();
 		
 		
 		for(int hourOfDay=0; hourOfDay<HOURS_IN_DAY; hourOfDay++) {
@@ -139,83 +146,33 @@ public class Calculator {
 			double asention    = today.rightAscention + fractionOfDay*changeInAscention;
 			double declination = today.declination    + fractionOfDay*changeInDeclination;
 					
-			testResult =  testHourForEvent(hourOfDay,
+			TestResult testResult =  testHourForEvent(
+										   hourOfDay,
 										   offset,
 										   previousAscention,   asention, 
 										   previousDeclination, declination,
 										   previousV, gps, LST);
 			
+			if(testResult.rise != null) {
+				ret.rise       = testResult.rise;
+				ret.riseAzmith = testResult.riseAzmith;
+			}
+			
+			if(testResult.set != null) {
+				ret.set       = testResult.set;
+				ret.setAzmith = testResult.setAzmith;
+			}
+			
 			previousAscention   = asention;
 			previousDeclination = declination;
 			previousV           = testResult.V;
 			
-			if(testResult.rise != null) {
-				result.sunRise    = testResult.rise;
-				result.riseAzmith = testResult.riseAzmith;
-			}
-			
-			if(testResult.set != null) {
-				result.sunSet    = testResult.set;
-				result.setAzmith = testResult.setAzmith;
-			}
-			
 		}
 		
 		
-		result.typeOfDay = findTypeOfDay(result, testResult.V);
-		calculateSolarNoon(result);
-		return result;
+		return ret;
 	}
-	
-	private void calculateSolarNoon(Result result) {
-		switch(result.typeOfDay) {
-		case NORMAL_DAY:
-			Time lengthOfDay = result.getLengthOfDay();
-			int totalMins = (lengthOfDay.hour*60 + lengthOfDay.min)/2;
-			
-			int hour = result.sunRise.hour + (totalMins/60);
-			int min  = result.sunRise.min  + (totalMins%60);
-			
-			if(min > 60) {
-				hour++;
-				min = min - 60;
-			}
-			result.solarNoon = new Time(hour, min);
-			break;
-		default:
-			result.solarNoon = null;
-		}
-	}
-	
-	
-	private Result.TypeOfDay findTypeOfDay(Result result, double lastV) {
-
-		if(result.sunRise==null && result.sunSet==null) {
-			if (lastV < 0) {
-				return Result.TypeOfDay.SUN_DOWN_ALL_DAY;
-			} else {
-				return Result.TypeOfDay.SUN_UP_ALL_DAY;
-			}
-			
-		} else if(result.sunRise==null) {
-			return Result.TypeOfDay.NO_SUNRISE;
-			
-		} else if(result.sunSet==null) {
-			return Result.TypeOfDay.NO_SUNSET;
-			
-		} else {
-			return Result.TypeOfDay.NORMAL_DAY;
-		}
-
-	}
-	
-	
-	private static class TestResult {
-		Time rise, set;
-		double riseAzmith, setAzmith;
-		double V;
-	}
-	
+		
 	
 	/**
 	 * Test an hour for an event
@@ -308,6 +265,13 @@ public class Calculator {
 		ret.V = V;
 		return ret;
 		
+	}
+	
+	
+	private static class TestResult {
+		Time rise, set;
+		double riseAzmith, setAzmith;
+		double V;
 	}
 
 
@@ -648,6 +612,48 @@ public class Calculator {
 		
 		//System.out.println("Julian date: "+julianDate);
 		return julianDate;
+	}
+	
+	private void calculateSolarNoon(Result result) {
+		switch(result.typeOfDay) {
+		case NORMAL_DAY:
+			Time lengthOfDay = result.getLengthOfDay();
+			int totalMins = (lengthOfDay.hour*60 + lengthOfDay.min)/2;
+			
+			int hour = result.sunRise.hour + (totalMins/60);
+			int min  = result.sunRise.min  + (totalMins%60);
+			
+			if(min > 60) {
+				hour++;
+				min = min - 60;
+			}
+			result.solarNoon = new Time(hour, min);
+			break;
+		default:
+			result.solarNoon = null;
+		}
+	}
+	
+	
+	private Result.TypeOfDay findTypeOfDay(Result result, double lastV) {
+
+		if(result.sunRise==null && result.sunSet==null) {
+			if (lastV < 0) {
+				return Result.TypeOfDay.SUN_DOWN_ALL_DAY;
+			} else {
+				return Result.TypeOfDay.SUN_UP_ALL_DAY;
+			}
+			
+		} else if(result.sunRise==null) {
+			return Result.TypeOfDay.NO_SUNRISE;
+			
+		} else if(result.sunSet==null) {
+			return Result.TypeOfDay.NO_SUNSET;
+			
+		} else {
+			return Result.TypeOfDay.NORMAL_DAY;
+		}
+
 	}
 	
 }
