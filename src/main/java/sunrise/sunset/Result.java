@@ -101,7 +101,7 @@ public class Result {
 			writer.println(", Solar Noon: "+solarNoon);
 		}
 
-		writer.printf("Golden Hour          : (%s, %s)\n", 
+		writer.printf("Golden Hour          : (sunrise to %s, %s to sunset)\n", 
 				      (goldenHourBegin == null ? "null" : goldenHourBegin),
 				      (goldenHourEnd == null ? "null" : goldenHourEnd));
 		
