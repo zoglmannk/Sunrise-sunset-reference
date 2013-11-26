@@ -60,11 +60,7 @@ public class Calculator {
 		Position sunToday    = calculateSunPosition(daysFromEpoc);		
 		Position sunTomorrow = calculateSunPosition(daysFromEpoc+1);
 		
-		if (sunTomorrow.rightAscention < sunToday.rightAscention) {
-			double ascention = sunTomorrow.rightAscention+2*Math.PI;
-			sunTomorrow = new Position(ascention, sunTomorrow.declination);
-		}
-		
+		sunTomorrow = ensureSecondAscentionGreater(sunToday, sunTomorrow);
 		TestResult sunriseSunset        = calculate(SUNRISE_SUNET_OFFSET, gps, LST, sunToday, sunTomorrow);
 		
 		Result combined = new Result();
@@ -93,12 +89,7 @@ public class Calculator {
 		//calculate today moon
 		Position moonToday    = calculateMoonPosition(daysFromEpoc);
 		Position moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
-
-		
-		if (moonTomorrow.rightAscention < moonToday.rightAscention) {
-			double ascention = moonTomorrow.rightAscention+2*Math.PI;
-			moonTomorrow = new Position(ascention, moonTomorrow.declination);
-		}
+		moonTomorrow = ensureSecondAscentionGreater(moonToday, moonTomorrow);
 		
 		TestResult todayMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
 		combined.moonRiseToday = todayMoon.rise;
@@ -108,18 +99,22 @@ public class Calculator {
 		//calculate tomorrow moon
 		moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
 		Position moonDayAfter = calculateMoonPosition(daysFromEpoc+2);
-
-		
-		if (moonDayAfter.rightAscention < moonTomorrow.rightAscention) {
-			double ascention = moonDayAfter.rightAscention+2*Math.PI;
-			moonDayAfter = new Position(ascention, moonDayAfter.declination);
-		}
+		moonDayAfter = ensureSecondAscentionGreater(moonTomorrow, moonDayAfter);
 		
 		TestResult tomorrowMoon = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
 		combined.moonRiseTomorrow = tomorrowMoon.rise;
 		combined.moonSetTomorrow  = tomorrowMoon.set;
 		
 		return combined; 
+	}
+
+	private Position ensureSecondAscentionGreater(Position first, Position second) {
+		if (second.rightAscention < first.rightAscention) {
+			double ascention = second.rightAscention+2*Math.PI;
+			second = new Position(ascention, second.declination);
+		}
+		
+		return second;
 	}
 
 	private TestResult calculate(
