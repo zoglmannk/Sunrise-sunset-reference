@@ -656,7 +656,7 @@ public class Calculator {
 			int hour = event.rise.hour + (totalMins/60);
 			int min  = event.rise.min  + (totalMins%60);
 			
-			if(min > 60) {
+			if(min >= 60) {
 				hour++;
 				min = min - 60;
 			}
@@ -676,12 +676,12 @@ public class Calculator {
 			int hour = event.set.hour + (totalMins/60);
 			int min  = event.set.min  + (totalMins%60);
 			
-			if(min > 60) {
+			if(min >= 60) {
 				hour++;
 				min = min - 60;
 			}
 			
-			if(hour > 24) {
+			if(hour >= 24) {
 				hour -= 24;
 			}
 			event.antimeridianCrossing = new Time(hour, min);
