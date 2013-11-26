@@ -105,15 +105,15 @@ public class Result {
 				      (goldenHourBegin == null ? "null" : goldenHourBegin),
 				      (goldenHourEnd == null ? "null" : goldenHourEnd));
 		
-		writer.printf("Civil Twilight       : (%s, %s)\n", 
+		writer.printf("Civil Twilight       : (%s to sunrise, sunset to %s)\n", 
 					  (civilTwilightBegin == null ? "null" : civilTwilightBegin),
 					  (civilTwilightEnd == null ? "null" : civilTwilightEnd));
 		
-		writer.printf("Nautical Twilight    : (%s, %s)\n", 
+		writer.printf("Nautical Twilight    : (%s to sunrise, sunset to %s)\n", 
 					  (nauticalTwilightBegin == null ? "null" : nauticalTwilightBegin),
 					  (nauticalTwilightEnd == null ? "null" : nauticalTwilightEnd));
 		
-		writer.printf("Astronomical Twilight: (%s, %s)\n", 
+		writer.printf("Astronomical Twilight: (%s to sunrise, sunset to %s)\n", 
 					  (astronomicalTwilightBegin == null ? "null" : astronomicalTwilightBegin),
 					  (astronomicalTwilightEnd == null ? "null" : astronomicalTwilightEnd));
 
