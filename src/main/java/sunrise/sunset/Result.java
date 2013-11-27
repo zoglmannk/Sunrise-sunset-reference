@@ -10,7 +10,7 @@ public class Result {
 	public Event astronomicalTwilight, nauticalTwilight, civilTwilight;
 	public Event goldenHour;
 	
-	public Event moonToday, moonTomorrow;
+	public MoonEvent moonToday, moonTomorrow;
 	
 
 	public static class Event {
@@ -20,6 +20,25 @@ public class Result {
 		
 		public Time meridianCrossing, antimeridianCrossing;
 		public Time risenAmount, setAmount;
+	}
+	
+	public static class MoonEvent extends Event {
+		public double ageInDays;
+		public double illuminationPercent;
+		
+		public MoonEvent() { }
+		
+		public MoonEvent(Event event) {
+			this.rise = event.rise;
+			this.set = event.set;
+			this.riseAzimuth = event.riseAzimuth;
+			this.setAzimuth  = event.setAzimuth;
+			this.type = event.type;
+			this.meridianCrossing = event.meridianCrossing;
+			this.antimeridianCrossing = event.antimeridianCrossing;
+			this.risenAmount = event.risenAmount;
+			this.setAmount   = event.setAmount;
+		}
 	}
 	
 	public enum HorizonToHorizonCrossing {
@@ -103,12 +122,16 @@ public class Result {
 					  replaceNull(astronomicalTwilight.setAmount));
 
 		
-		writer.printf("Today's Moonrise   : %s   Moonset: %s\n",
+		writer.printf("Today's Moonrise   : %s   Moonset: %s   Moon age: %3.0f days   Illumination: %3.0f%%\n",
 					  formatTimeAndAzimuth(moonToday.rise, moonToday.riseAzimuth),
-					  formatTimeAndAzimuth(moonToday.set , moonToday.setAzimuth));
-		writer.printf("Tomorrow's Moonrise: %s   Moonset: %s\n",
+					  formatTimeAndAzimuth(moonToday.set , moonToday.setAzimuth),
+					  moonToday.ageInDays, 
+					  moonToday.illuminationPercent);
+		writer.printf("Tomorrow's Moonrise: %s   Moonset: %s   Moon age: %3.0f days   Illumination: %3.0f%%\n",
 					  formatTimeAndAzimuth(moonTomorrow.rise, moonTomorrow.riseAzimuth),
-					  formatTimeAndAzimuth(moonTomorrow.set,  moonTomorrow.setAzimuth));
+					  formatTimeAndAzimuth(moonTomorrow.set,  moonTomorrow.setAzimuth),
+					  moonTomorrow.ageInDays, 
+					  moonTomorrow.illuminationPercent);
 		
 		writer.flush();
 		return sw.getBuffer().toString();
@@ -122,7 +145,7 @@ public class Result {
 		StringWriter sw = new StringWriter();
 		PrintWriter writer = new PrintWriter(sw);
 		
-		writer.printf("(%s, azimuth %5.1f)",
+		writer.printf("(%s, azimuth %5.1f degrees)",
 				  replaceNull(t), azimuth);
 		
 		writer.flush();

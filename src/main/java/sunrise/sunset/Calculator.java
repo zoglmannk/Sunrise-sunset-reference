@@ -1,10 +1,12 @@
 package sunrise.sunset;
 
 import sunrise.sunset.Result.Event;
+import sunrise.sunset.Result.MoonEvent;
 
 
 public class Calculator {
 
+	private static final double DAYS_IN_LUNAR_MONTH = 29.530588853;
 	private static final int NEW_STANDARD_EPOC = 2451545; // January 1, 2000 at noon
 	private static final int NUM_DAYS_IN_CENTURY = 36525; // 365 days * 100 years + 25 extra days for leap years
 	private static final int HOURS_IN_DAY = 24;
@@ -48,7 +50,7 @@ public class Calculator {
 		
 		double timeZoneShift = -1  * ((double)utcToLocal)/HOURS_IN_DAY;
 		
-		int julianDate = calculateJulianDate(date);
+		int julianDate = calculateJulianDate(date); //note that the julianDate is truncated
 		double daysFromEpoc = (julianDate - NEW_STANDARD_EPOC) + 0.5;
 
 		
@@ -74,16 +76,40 @@ public class Calculator {
 		Position moonToday    = calculateMoonPosition(daysFromEpoc);
 		Position moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
 		moonTomorrow = ensureSecondAscentionGreater(moonToday, moonTomorrow);		
-		ret.moonToday = calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow);
+		ret.moonToday = new MoonEvent(calculate(MOONRISE_MOONSET_OFFSET, gps, LST, moonToday, moonTomorrow));
+		ret.moonToday.ageInDays = calculateMoonsAge(julianDate+1);
+		ret.moonToday.illuminationPercent = calculateMoonIlluminationPercent(ret.moonToday.ageInDays);
 		
 		
 		//calculate tomorrow moon
 		moonTomorrow = calculateMoonPosition(daysFromEpoc+1);
 		Position moonDayAfter = calculateMoonPosition(daysFromEpoc+2);
 		moonDayAfter = ensureSecondAscentionGreater(moonTomorrow, moonDayAfter);
-		ret.moonTomorrow = calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter);
+		ret.moonTomorrow = new MoonEvent(calculate(MOONRISE_MOONSET_OFFSET, gps, nextLST, moonTomorrow, moonDayAfter));
+		ret.moonTomorrow.ageInDays = calculateMoonsAge(julianDate+2);
+		ret.moonTomorrow.illuminationPercent = calculateMoonIlluminationPercent(ret.moonTomorrow.ageInDays);
+		
 		
 		return ret; 
+	}
+	
+	private double calculateMoonsAge(double julianDate) {
+		double temp=(julianDate-2451550.1)/DAYS_IN_LUNAR_MONTH;
+		double ret = temp - ((int) temp);
+		
+		if(ret < 0) {
+			ret++;
+		}
+		ret = ret*DAYS_IN_LUNAR_MONTH;
+		
+		return ret;
+	}
+	
+	/**
+	 * Until I find a more accurate formula, this will have to do. Seems to be accurate to within +/- 5%.
+	 */
+	private double calculateMoonIlluminationPercent(double ageInDaysSinceNewMoon) {
+		return .5 * (1 + Math.cos( (Math.round(ageInDaysSinceNewMoon)+DAYS_IN_LUNAR_MONTH/2)/DAYS_IN_LUNAR_MONTH*2*Math.PI)) * 100;
 	}
 
 	private Position ensureSecondAscentionGreater(Position first, Position second) {
