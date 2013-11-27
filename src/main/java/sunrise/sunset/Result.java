@@ -122,7 +122,7 @@ public class Result {
 					  replaceNull(astronomicalTwilight.setAmount));
 
 		
-		writer.printf("Today's Moonrise   : %s   Moonset: %s   Moon age: %3.0f days   Illumination: %3.0f%%\n",
+		writer.printf("Today's    Moonrise: %s   Moonset: %s   Moon age: %3.0f days   Illumination: %3.0f%%\n",
 					  formatTimeAndAzimuth(moonToday.rise, moonToday.riseAzimuth),
 					  formatTimeAndAzimuth(moonToday.set , moonToday.setAzimuth),
 					  moonToday.ageInDays, 
